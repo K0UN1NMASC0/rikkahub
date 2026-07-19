@@ -1,166 +1,143 @@
-name: Build APK
+import re, os
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ master ]
-    paths-ignore:
-      - '**.md'
+# === App name → Tulpa ===
+res_dir = "app/src/main/res"
+count = 0
+for root, dirs, files in os.walk(res_dir):
+    for fname in files:
+        if fname == "strings.xml":
+            fpath = os.path.join(root, fname)
+            with open(fpath, "r", encoding="utf-8") as f:
+                content = f.read()
+            new_content = re.sub(
+                r'<string name="app_name">[^<]+</string>',
+                '<string name="app_name">Tulpa</string>',
+                content
+            )
+            if new_content != content:
+                with open(fpath, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                print(f"App name patched: {fpath}")
+                count += 1
+print(f"App name patched in {count} files")
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
+# === Wing patch ===
+msg_file = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+with open(msg_file, "r") as f:
+    lines = f.readlines()
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11
+def find_line(lines, keyword, start=0, end=None):
+    end = end or len(lines)
+    for i in range(start, end):
+        if keyword in lines[i]:
+            return i
+    return None
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web-ui/pnpm-lock.yaml
+def get_indent(line):
+    return line[:len(line) - len(line.lstrip())]
 
-      - name: Install web-ui dependencies
-        working-directory: web-ui
-        run: pnpm install --frozen-lockfile
+# --- User wing ---
+user_color = find_line(lines, "Color(0xFFFCE5EB)")
+print(f"User color line: {user_color}")
 
-      - name: Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+if user_color:
+    user_surface = None
+    for i in range(user_color, max(user_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            user_surface = i
+            break
+    print(f"User Surface line: {user_surface}")
+    if user_surface:
+        indent = get_indent(lines[user_surface])
+        box_and_wing = (
+            indent + "Box {\n"
+            + indent + "    Image(\n"
+            + indent + "        painter = painterResource(R.drawable.wing_right),\n"
+            + indent + "        contentDescription = null,\n"
+            + indent + "        modifier = Modifier\n"
+            + indent + "            .size(20.dp)\n"
+            + indent + "            .align(Alignment.TopEnd)\n"
+            + indent + "            .offset(x = 6.dp, y = (-6).dp)\n"
+            + indent + "            .zIndex(10f),\n"
+            + indent + "        contentScale = ContentScale.Fit\n"
+            + indent + "    )\n"
+        )
+        lines.insert(user_surface, box_and_wing)
+        print("User wing injected")
 
-      - name: Write google-services.json
-        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+        new_user_color = find_line(lines, "Color(0xFFFCE5EB)")
+        new_surface = None
+        for i in range(new_user_color, max(new_user_color - 10, 0), -1):
+            if "Surface(" in lines[i]:
+                new_surface = i
+                break
+        if new_surface:
+            brace_count = 0
+            found_open = False
+            for j in range(new_surface, min(new_surface + 40, len(lines))):
+                for ch in lines[j]:
+                    if ch == '{':
+                        brace_count += 1
+                        found_open = True
+                    elif ch == '}':
+                        brace_count -= 1
+                if found_open and brace_count == 0:
+                    lines.insert(j + 1, indent + "}\n")
+                    print(f"User Box closed at line {j + 1}")
+                    break
 
-      - name: Process app icon
-        run: |
-          if [ -f "ic_launcher.png" ]; then
-            sudo apt-get install -y imagemagick
-            for size_dir in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-              dir=$(echo $size_dir | cut -d: -f1)
-              size=$(echo $size_dir | cut -d: -f2)
-              mkdir -p app/src/main/res/mipmap-${dir}
-              convert ic_launcher.png -resize ${size}x${size} app/src/main/res/mipmap-${dir}/ic_launcher.png
-              cp app/src/main/res/mipmap-${dir}/ic_launcher.png app/src/main/res/mipmap-${dir}/ic_launcher_round.png
-            done
-            rm -f app/src/main/res/mipmap-*/ic_launcher.webp
-            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webp
-            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-          fi
+# --- AI wing ---
+ai_color = find_line(lines, "Color(0xFFFFFFFF)")
+print(f"AI color line: {ai_color}")
 
-      - name: Download wing decorations
-        run: |
-          mkdir -p app/src/main/res/drawable-xxhdpi
-          curl -L "https://img.heliar.top/file/1779196710409_%E7%BF%85%E8%86%80-%E5%8F%B3.png" -o app/src/main/res/drawable-xxhdpi/wing_right.png
-          curl -L "https://img.heliar.top/file/1779196708496_%E7%BF%85%E8%86%80-%E5%B7%A6.png" -o app/src/main/res/drawable-xxhdpi/wing_left.png
+if ai_color:
+    ai_surface = None
+    for i in range(ai_color, max(ai_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            ai_surface = i
+            break
+    print(f"AI Surface line: {ai_surface}")
+    if ai_surface:
+        indent = get_indent(lines[ai_surface])
+        box_and_wing = (
+            indent + "Box {\n"
+            + indent + "    Image(\n"
+            + indent + "        painter = painterResource(R.drawable.wing_left),\n"
+            + indent + "        contentDescription = null,\n"
+            + indent + "        modifier = Modifier\n"
+            + indent + "            .size(20.dp)\n"
+            + indent + "            .align(Alignment.TopStart)\n"
+            + indent + "            .offset(x = (-6).dp, y = (-6).dp)\n"
+            + indent + "            .zIndex(10f),\n"
+            + indent + "        contentScale = ContentScale.Fit\n"
+            + indent + "    )\n"
+        )
+        lines.insert(ai_surface, box_and_wing)
+        print("AI wing injected")
 
-      - name: Apply bubble customization
-        run: |
-          MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
-          LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
+        new_ai_color = find_line(lines, "Color(0xFFFFFFFF)")
+        new_surface = None
+        for i in range(new_ai_color, max(new_ai_color - 10, 0), -1):
+            if "Surface(" in lines[i]:
+                new_surface = i
+                break
+        if new_surface:
+            brace_count = 0
+            found_open = False
+            for j in range(new_surface, min(new_surface + 40, len(lines))):
+                for ch in lines[j]:
+                    if ch == '{':
+                        brace_count += 1
+                        found_open = True
+                    elif ch == '}':
+                        brace_count -= 1
+                if found_open and brace_count == 0:
+                    lines.insert(j + 1, indent + "}\n")
+                    print(f"AI Box closed at line {j + 1}")
+                    break
 
-          sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke\nimport androidx.compose.foundation.Image\nimport androidx.compose.foundation.layout.offset\nimport androidx.compose.ui.layout.ContentScale\nimport androidx.compose.ui.zIndex' "$MSG_FILE"
+with open(msg_file, "w") as f:
+    f.writelines(lines)
 
-          # User bubble: onClick version - onClick must be FIRST named param
-          sed -i '/shape = RoundedCornerShape(16.dp),/{
-            N
-            /primaryContainer/{
-              s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                contentColor = Color(0xFFA36779),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
-            }
-          }' "$MSG_FILE"
-
-          # Fix user bubble: move onClick before modifier for correct function signature
-          sed -i '/Color(0xFFFCE5EB)/{
-            N
-            N
-            N
-            N
-            s/Surface(\n\s*modifier = Modifier.animateContentSize(),\n\s*shape = RoundedCornerShape(19.dp),\n\s*color = Color(0xFFFCE5EB),/PLACEHOLDER_USER_SURFACE/
-          }' "$MSG_FILE"
-
-          # Actually simpler approach: just use python to fix parameter order
-          python3 -c "
-          with open('$MSG_FILE', 'r') as f:
-              content = f.read()
-
-          # Fix user bubble: Surface with onClick needs onClick as first param after opening paren
-          old = '''Surface(
-                                modifier = Modifier.animateContentSize(),
-                                shape = RoundedCornerShape(19.dp),
-                                color = Color(0xFFFCE5EB),
-                                contentColor = Color(0xFFA36779),
-                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
-                                onClick = { onUserMessageClick?.invoke() },
-                            )'''
-          new = '''Surface(
-                                onClick = { onUserMessageClick?.invoke() },
-                                modifier = Modifier.animateContentSize(),
-                                shape = RoundedCornerShape(19.dp),
-                                color = Color(0xFFFCE5EB),
-                                contentColor = Color(0xFFA36779),
-                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
-                            )'''
-          if old in content:
-              content = content.replace(old, new)
-              print('User Surface param order fixed')
-          else:
-              print('WARN: Could not find user Surface to fix param order')
-
-          with open('$MSG_FILE', 'w') as f:
-              f.write(content)
-          "
-
-          # AI bubble
-          sed -i '/shape = RoundedCornerShape(16.dp),/{
-            N
-            /surfaceContainerHigh/{
-              s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                        contentColor = Color(0xFFA36779),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
-            }
-          }' "$MSG_FILE"
-
-          sed -i 's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
-
-          python3 patch.py
-
-          echo "=== Verification ==="
-          grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble OK" || echo "WARN: User bubble not patched"
-          grep -n "Color(0xFFFFFFFF)" "$MSG_FILE" && echo "AI bubble OK" || echo "WARN: AI bubble not patched"
-          grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
-          grep -n "wing_right" "$MSG_FILE" && echo "User wing OK" || echo "WARN: User wing not patched"
-          grep -n "wing_left" "$MSG_FILE" && echo "AI wing OK" || echo "WARN: AI wing not patched"
-          grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"
-          grep -n "Tulpa" app/src/main/res/values/strings.xml && echo "App name OK" || echo "WARN: App name not patched"
-
-      - name: Build Debug APK
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: rikkahub-debug
-          path: app/build/outputs/apk/debug/*arm64*.apk
-          retention-days: 7
+print("Wing patch complete")
