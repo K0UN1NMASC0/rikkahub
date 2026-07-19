@@ -76,23 +76,21 @@ jobs:
           # Add BorderStroke import after existing foundation imports
           sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke' "$MSG_FILE"
 
-          # --- User bubble: change shape 16dp -> 19dp ---
-          # The user bubble is identified by primaryContainer on the next line after RoundedCornerShape
+          # --- User bubble: change shape, color, add border and contentColor ---
           sed -i '/shape = RoundedCornerShape(16.dp),/{
             N
             /primaryContainer/{
               s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
+              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                contentColor = Color(0xFFA36779),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
             }
           }' "$MSG_FILE"
 
-          # --- AI bubble: change shape 16dp -> 19dp and color ---
-          # The AI bubble is identified by surfaceContainerHigh on the next line
+          # --- AI bubble: change shape, color, add border and contentColor ---
           sed -i '/shape = RoundedCornerShape(16.dp),/{
             N
             /surfaceContainerHigh/{
               s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
+              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                        contentColor = Color(0xFFA36779),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
             }
           }' "$MSG_FILE"
 
@@ -100,9 +98,9 @@ jobs:
           sed -i 's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
 
           echo "=== Bubble customization applied ==="
-          # Verify changes
           grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble color OK" || echo "WARN: User bubble not patched"
           grep -n "Color(0xFFFFFFFF)" "$MSG_FILE" && echo "AI bubble color OK" || echo "WARN: AI bubble not patched"
+          grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
           grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"
 
       - name: Build Debug APK
