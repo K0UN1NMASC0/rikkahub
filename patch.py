@@ -37,24 +37,20 @@ def find_line(lines, keyword, start=0, end=None):
 def get_indent(line):
     return line[:len(line) - len(line.lstrip())]
 
-# --- User wing: put inside Surface's Column, as overlay ---
+# --- User wing ---
 user_color = find_line(lines, "Color(0xFFFCE5EB)")
 print(f"User color line: {user_color}")
 
 if user_color:
-    # Find "Column(modifier = Modifier.padding(8.dp))" after user Surface
-    user_column = None
-    for i in range(user_color, min(user_color + 8, len(lines))):
-        if "Column(modifier = Modifier.padding" in lines[i]:
-            user_column = i
+    user_surface = None
+    for i in range(user_color, max(user_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            user_surface = i
             break
-    print(f"User Column line: {user_column}")
-    if user_column:
-        # Replace Column with Box containing wing overlay + Column
-        indent = get_indent(lines[user_column])
-        # Replace the Column line with Box + wing + Column
-        old_line = lines[user_column]
-        new_block = (
+    print(f"User Surface line: {user_surface}")
+    if user_surface:
+        indent = get_indent(lines[user_surface])
+        box_and_wing = (
             indent + "Box {\n"
             + indent + "    Image(\n"
             + indent + "        painter = painterResource(R.drawable.wing_right),\n"
@@ -66,43 +62,46 @@ if user_color:
             + indent + "            .zIndex(10f),\n"
             + indent + "        contentScale = ContentScale.Fit\n"
             + indent + "    )\n"
-            + old_line
         )
-        lines[user_column] = new_block
-        print("User wing injected inside Surface")
+        lines.insert(user_surface, box_and_wing)
+        print("User wing injected")
 
-        # Find the closing "}" of Column and add Box closing "}"
-        # Count braces from user_column to find matching close
-        brace_count = 0
-        found_open = False
-        for j in range(user_column, min(user_column + 30, len(lines))):
-            for ch in lines[j]:
-                if ch == '{':
-                    brace_count += 1
-                    found_open = True
-                elif ch == '}':
-                    brace_count -= 1
-            if found_open and brace_count == 0:
-                # This is where Column closes, add Box close after
-                lines.insert(j + 1, indent + "}\n")
-                print(f"User Box closed at line {j + 1}")
+        # Find Surface closing brace
+        new_user_color = find_line(lines, "Color(0xFFFCE5EB)")
+        new_surface = None
+        for i in range(new_user_color, max(new_user_color - 10, 0), -1):
+            if "Surface(" in lines[i]:
+                new_surface = i
                 break
+        if new_surface:
+            brace_count = 0
+            found_open = False
+            for j in range(new_surface, min(new_surface + 40, len(lines))):
+                for ch in lines[j]:
+                    if ch == '{':
+                        brace_count += 1
+                        found_open = True
+                    elif ch == '}':
+                        brace_count -= 1
+                if found_open and brace_count == 0:
+                    lines.insert(j + 1, indent + "}\n")
+                    print(f"User Box closed at line {j + 1}")
+                    break
 
-# --- AI wing: same approach ---
+# --- AI wing ---
 ai_color = find_line(lines, "Color(0xFFFFFFFF)")
 print(f"AI color line: {ai_color}")
 
 if ai_color:
-    ai_column = None
-    for i in range(ai_color, min(ai_color + 8, len(lines))):
-        if "Column(modifier = Modifier.padding" in lines[i]:
-            ai_column = i
+    ai_surface = None
+    for i in range(ai_color, max(ai_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            ai_surface = i
             break
-    print(f"AI Column line: {ai_column}")
-    if ai_column:
-        indent = get_indent(lines[ai_column])
-        old_line = lines[ai_column]
-        new_block = (
+    print(f"AI Surface line: {ai_surface}")
+    if ai_surface:
+        indent = get_indent(lines[ai_surface])
+        box_and_wing = (
             indent + "Box {\n"
             + indent + "    Image(\n"
             + indent + "        painter = painterResource(R.drawable.wing_left),\n"
@@ -114,24 +113,30 @@ if ai_color:
             + indent + "            .zIndex(10f),\n"
             + indent + "        contentScale = ContentScale.Fit\n"
             + indent + "    )\n"
-            + old_line
         )
-        lines[ai_column] = new_block
-        print("AI wing injected inside Surface")
+        lines.insert(ai_surface, box_and_wing)
+        print("AI wing injected")
 
-        brace_count = 0
-        found_open = False
-        for j in range(ai_column, min(ai_column + 30, len(lines))):
-            for ch in lines[j]:
-                if ch == '{':
-                    brace_count += 1
-                    found_open = True
-                elif ch == '}':
-                    brace_count -= 1
-            if found_open and brace_count == 0:
-                lines.insert(j + 1, indent + "}\n")
-                print(f"AI Box closed at line {j + 1}")
+        new_ai_color = find_line(lines, "Color(0xFFFFFFFF)")
+        new_surface = None
+        for i in range(new_ai_color, max(new_ai_color - 10, 0), -1):
+            if "Surface(" in lines[i]:
+                new_surface = i
                 break
+        if new_surface:
+            brace_count = 0
+            found_open = False
+            for j in range(new_surface, min(new_surface + 40, len(lines))):
+                for ch in lines[j]:
+                    if ch == '{':
+                        brace_count += 1
+                        found_open = True
+                    elif ch == '}':
+                        brace_count -= 1
+                if found_open and brace_count == 0:
+                    lines.insert(j + 1, indent + "}\n")
+                    print(f"AI Box closed at line {j + 1}")
+                    break
 
 with open(msg_file, "w") as f:
     f.writelines(lines)
