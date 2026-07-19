@@ -1,58 +1,119 @@
 import re, os
 
-# === App name → Tulpa ===
+# ============================================================
+# Tulpa Patch - clean version, no sed, no shit mountain
+# ============================================================
+
+MSG_FILE = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
+LIST_FILE = "app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
+
+# === 1. App name → Tulpa ===
 res_dir = "app/src/main/res"
-count = 0
+name_count = 0
 for root, dirs, files in os.walk(res_dir):
     for fname in files:
         if fname == "strings.xml":
             fpath = os.path.join(root, fname)
             with open(fpath, "r", encoding="utf-8") as f:
-                content = f.read()
-            new_content = re.sub(
-                r'<string name="app_name">[^<]+</string>',
-                '<string name="app_name">Tulpa</string>',
-                content
-            )
-            if new_content != content:
+                c = f.read()
+            new_c = re.sub(r'<string name="app_name">[^<]+</string>',
+                           '<string name="app_name">Tulpa</string>', c)
+            if new_c != c:
                 with open(fpath, "w", encoding="utf-8") as f:
-                    f.write(new_content)
-                print(f"App name patched: {fpath}")
-                count += 1
-print(f"App name patched in {count} files")
+                    f.write(new_c)
+                name_count += 1
+print(f"[1] App name: patched {name_count} files")
 
-# === Bubble + Wing patch ===
-msg_file = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
+# === 2. ChatMessage.kt - bubble colors + imports + wings ===
+with open(MSG_FILE, "r") as f:
+    src = f.read()
 
-with open(msg_file, "r") as f:
-    content = f.read()
+# 2a. Add imports (only if not already present)
+if "import androidx.compose.foundation.BorderStroke" not in src:
+    import_block = (
+        "import androidx.compose.foundation.BorderStroke\n"
+        "import androidx.compose.foundation.Image\n"
+        "import androidx.compose.foundation.layout.offset\n"
+        "import androidx.compose.ui.layout.ContentScale\n"
+        "import androidx.compose.ui.zIndex\n"
+    )
+    # Insert after the last import line
+    last_import = src.rfind("\nimport ")
+    next_nl = src.find("\n", last_import + 1)
+    src = src[:next_nl + 1] + import_block + src[next_nl + 1:]
+    print("[2a] Imports added")
 
-# --- Fix user bubble onClick parameter order ---
-# After sed runs, the user Surface has onClick at the wrong position
-# We need onClick to be the FIRST named parameter
-content = re.sub(
-    r'Surface\(\s*modifier = Modifier\.animateContentSize\(\),\s*shape = RoundedCornerShape\(19\.dp\),\s*color = Color\(0xFFFCE5EB\),\s*contentColor = Color\(0xFFA36779\),\s*border = BorderStroke\(1\.dp, Color\(0xFFF1C5D4\)\),\s*onClick = \{ onUserMessageClick\?\.invoke\(\) \},',
-    '''Surface(
-                                onClick = { onUserMessageClick?.invoke() },
-                                modifier = Modifier.animateContentSize(),
-                                shape = RoundedCornerShape(19.dp),
-                                color = Color(0xFFFCE5EB),
-                                contentColor = Color(0xFFA36779),
-                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),''',
-    content
+# 2b. User bubble - replace entire Surface call
+# Original pattern (onClick version):
+#   Surface(
+#       modifier = Modifier.animateContentSize(),
+#       shape = RoundedCornerShape(16.dp),
+#       color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),
+#       onClick = { onUserMessageClick?.invoke() },
+#   )
+user_pattern = re.compile(
+    r'(Surface\(\s*)'
+    r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
+    r'shape\s*=\s*RoundedCornerShape\(16\.dp\),\s*'
+    r'color\s*=\s*MaterialTheme\.colorScheme\.primaryContainer\.copy\(alpha\s*=\s*settings\.displaySetting\.bubbleOpacity\),\s*'
+    r'onClick\s*=\s*\{\s*onUserMessageClick\?\.invoke\(\)\s*\},\s*'
+    r'\)',
+    re.DOTALL
 )
-print("User Surface onClick fix: applied via regex")
 
-with open(msg_file, "w") as f:
-    f.write(content)
+user_replacement = (
+    "Surface(\n"
+    "                                onClick = { onUserMessageClick?.invoke() },\n"
+    "                                modifier = Modifier.animateContentSize(),\n"
+    "                                shape = RoundedCornerShape(19.dp),\n"
+    "                                color = Color(0xFFFCE5EB),\n"
+    "                                contentColor = Color(0xFFA36779),\n"
+    "                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
+    "                            )"
+)
 
-# === Wing injection ===
-with open(msg_file, "r") as f:
+src, n = user_pattern.subn(user_replacement, src)
+print(f"[2b] User bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
+
+# 2c. AI bubble - replace Surface call
+# Original pattern (no onClick):
+#   Surface(
+#       modifier = Modifier.animateContentSize(),
+#       shape = RoundedCornerShape(16.dp),
+#       color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),
+#   )
+ai_pattern = re.compile(
+    r'Surface\(\s*'
+    r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
+    r'shape\s*=\s*RoundedCornerShape\(16\.dp\),\s*'
+    r'color\s*=\s*MaterialTheme\.colorScheme\.surfaceContainerHigh\.copy\(alpha\s*=\s*settings\.displaySetting\.bubbleOpacity\),\s*'
+    r'\)',
+    re.DOTALL
+)
+
+ai_replacement = (
+    "Surface(\n"
+    "                                        modifier = Modifier.animateContentSize(),\n"
+    "                                        shape = RoundedCornerShape(19.dp),\n"
+    "                                        color = Color(0xFFFFFFFF),\n"
+    "                                        contentColor = Color(0xFFA36779),\n"
+    "                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
+    "                                    )"
+)
+
+src, n = ai_pattern.subn(ai_replacement, src)
+print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
+
+# Save intermediate result
+with open(MSG_FILE, "w") as f:
+    f.write(src)
+
+# === 2d. Wing injection (line-based) ===
+with open(MSG_FILE, "r") as f:
     lines = f.readlines()
 
-def find_line(lines, keyword, start=0, end=None):
-    end = end or len(lines)
-    for i in range(start, end):
+def find_line(keyword, start=0):
+    for i in range(start, len(lines)):
         if keyword in lines[i]:
             return i
     return None
@@ -60,107 +121,78 @@ def find_line(lines, keyword, start=0, end=None):
 def get_indent(line):
     return line[:len(line) - len(line.lstrip())]
 
-# --- User wing ---
-user_color = find_line(lines, "Color(0xFFFCE5EB)")
-print(f"User color line: {user_color}")
-
-if user_color:
-    user_surface = None
-    for i in range(user_color, max(user_color - 10, 0), -1):
+def inject_wing(color_keyword, drawable, align, offset_x):
+    color_line = find_line(color_keyword)
+    if color_line is None:
+        print(f"  Wing ({drawable}): color line not found")
+        return
+    # Find Surface( before color line
+    surface_line = None
+    for i in range(color_line, max(color_line - 10, 0), -1):
         if "Surface(" in lines[i]:
-            user_surface = i
+            surface_line = i
             break
-    print(f"User Surface line: {user_surface}")
-    if user_surface:
-        indent = get_indent(lines[user_surface])
-        box_and_wing = (
-            indent + "Box {\n"
-            + indent + "    Image(\n"
-            + indent + "        painter = painterResource(R.drawable.wing_right),\n"
-            + indent + "        contentDescription = null,\n"
-            + indent + "        modifier = Modifier\n"
-            + indent + "            .size(20.dp)\n"
-            + indent + "            .align(Alignment.TopEnd)\n"
-            + indent + "            .offset(x = 6.dp, y = (-6).dp)\n"
-            + indent + "            .zIndex(10f),\n"
-            + indent + "        contentScale = ContentScale.Fit\n"
-            + indent + "    )\n"
-        )
-        lines.insert(user_surface, box_and_wing)
-        print("User wing injected")
-
-        new_user_color = find_line(lines, "Color(0xFFFCE5EB)")
-        new_surface = None
-        for i in range(new_user_color, max(new_user_color - 10, 0), -1):
-            if "Surface(" in lines[i]:
-                new_surface = i
-                break
-        if new_surface:
-            brace_count = 0
-            found_open = False
-            for j in range(new_surface, min(new_surface + 40, len(lines))):
-                for ch in lines[j]:
-                    if ch == '{':
-                        brace_count += 1
-                        found_open = True
-                    elif ch == '}':
-                        brace_count -= 1
-                if found_open and brace_count == 0:
-                    lines.insert(j + 1, indent + "}\n")
-                    print(f"User Box closed at line {j + 1}")
-                    break
-
-# --- AI wing ---
-ai_color = find_line(lines, "Color(0xFFFFFFFF)")
-print(f"AI color line: {ai_color}")
-
-if ai_color:
-    ai_surface = None
-    for i in range(ai_color, max(ai_color - 10, 0), -1):
+    if surface_line is None:
+        print(f"  Wing ({drawable}): Surface not found")
+        return
+    indent = get_indent(lines[surface_line])
+    wing = (
+        f"{indent}Box {{\n"
+        f"{indent}    Image(\n"
+        f"{indent}        painter = painterResource(R.drawable.{drawable}),\n"
+        f"{indent}        contentDescription = null,\n"
+        f"{indent}        modifier = Modifier\n"
+        f"{indent}            .size(20.dp)\n"
+        f"{indent}            .align({align})\n"
+        f"{indent}            .offset(x = {offset_x}, y = (-6).dp)\n"
+        f"{indent}            .zIndex(10f),\n"
+        f"{indent}        contentScale = ContentScale.Fit\n"
+        f"{indent}    )\n"
+    )
+    lines.insert(surface_line, wing)
+    print(f"  Wing ({drawable}): injected at line {surface_line}")
+    # Find Surface closing brace to close Box
+    new_color = find_line(color_keyword)
+    new_surface = None
+    for i in range(new_color, max(new_color - 10, 0), -1):
         if "Surface(" in lines[i]:
-            ai_surface = i
+            new_surface = i
             break
-    print(f"AI Surface line: {ai_surface}")
-    if ai_surface:
-        indent = get_indent(lines[ai_surface])
-        box_and_wing = (
-            indent + "Box {\n"
-            + indent + "    Image(\n"
-            + indent + "        painter = painterResource(R.drawable.wing_left),\n"
-            + indent + "        contentDescription = null,\n"
-            + indent + "        modifier = Modifier\n"
-            + indent + "            .size(20.dp)\n"
-            + indent + "            .align(Alignment.TopStart)\n"
-            + indent + "            .offset(x = (-6).dp, y = (-6).dp)\n"
-            + indent + "            .zIndex(10f),\n"
-            + indent + "        contentScale = ContentScale.Fit\n"
-            + indent + "    )\n"
-        )
-        lines.insert(ai_surface, box_and_wing)
-        print("AI wing injected")
+    if new_surface:
+        brace = 0
+        started = False
+        for j in range(new_surface, min(new_surface + 40, len(lines))):
+            for ch in lines[j]:
+                if ch == '{':
+                    brace += 1
+                    started = True
+                elif ch == '}':
+                    brace -= 1
+            if started and brace == 0:
+                lines.insert(j + 1, f"{indent}}}\n")
+                print(f"  Wing ({drawable}): Box closed at line {j + 1}")
+                return
 
-        new_ai_color = find_line(lines, "Color(0xFFFFFFFF)")
-        new_surface = None
-        for i in range(new_ai_color, max(new_ai_color - 10, 0), -1):
-            if "Surface(" in lines[i]:
-                new_surface = i
-                break
-        if new_surface:
-            brace_count = 0
-            found_open = False
-            for j in range(new_surface, min(new_surface + 40, len(lines))):
-                for ch in lines[j]:
-                    if ch == '{':
-                        brace_count += 1
-                        found_open = True
-                    elif ch == '}':
-                        brace_count -= 1
-                if found_open and brace_count == 0:
-                    lines.insert(j + 1, indent + "}\n")
-                    print(f"AI Box closed at line {j + 1}")
-                    break
+# User wing
+print("[2d] Injecting wings...")
+inject_wing("Color(0xFFFCE5EB)", "wing_right", "Alignment.TopEnd", "6.dp")
+# AI wing (re-read to get updated positions)
+inject_wing("Color(0xFFFFFFFF)", "wing_left", "Alignment.TopStart", "(-6).dp")
 
-with open(msg_file, "w") as f:
+with open(MSG_FILE, "w") as f:
     f.writelines(lines)
+print("[2d] Wings done")
 
-print("All patches complete")
+# === 3. ChatList.kt - reduce spacing ===
+with open(LIST_FILE, "r") as f:
+    list_src = f.read()
+
+list_src = list_src.replace(
+    "verticalArrangement = Arrangement.spacedBy(12.dp),",
+    "verticalArrangement = Arrangement.spacedBy(4.dp),"
+)
+with open(LIST_FILE, "w") as f:
+    f.write(list_src)
+print("[3] Spacing: OK")
+
+print("\n=== All patches complete ===")
