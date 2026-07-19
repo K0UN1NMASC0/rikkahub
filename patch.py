@@ -21,9 +21,32 @@ for root, dirs, files in os.walk(res_dir):
                 count += 1
 print(f"App name patched in {count} files")
 
-# === Wing patch ===
+# === Bubble + Wing patch ===
 msg_file = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
 
+with open(msg_file, "r") as f:
+    content = f.read()
+
+# --- Fix user bubble onClick parameter order ---
+# After sed runs, the user Surface has onClick at the wrong position
+# We need onClick to be the FIRST named parameter
+content = re.sub(
+    r'Surface\(\s*modifier = Modifier\.animateContentSize\(\),\s*shape = RoundedCornerShape\(19\.dp\),\s*color = Color\(0xFFFCE5EB\),\s*contentColor = Color\(0xFFA36779\),\s*border = BorderStroke\(1\.dp, Color\(0xFFF1C5D4\)\),\s*onClick = \{ onUserMessageClick\?\.invoke\(\) \},',
+    '''Surface(
+                                onClick = { onUserMessageClick?.invoke() },
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(19.dp),
+                                color = Color(0xFFFCE5EB),
+                                contentColor = Color(0xFFA36779),
+                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),''',
+    content
+)
+print("User Surface onClick fix: applied via regex")
+
+with open(msg_file, "w") as f:
+    f.write(content)
+
+# === Wing injection ===
 with open(msg_file, "r") as f:
     lines = f.readlines()
 
@@ -140,4 +163,4 @@ if ai_color:
 with open(msg_file, "w") as f:
     f.writelines(lines)
 
-print("Wing patch complete")
+print("All patches complete")
