@@ -1,4 +1,5 @@
 name: Build APK
+
 on:
   workflow_dispatch:
   push:
@@ -8,8 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: writesteps:
-      - uses: actions/checkout@v4with:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           submodules: recursive
 
