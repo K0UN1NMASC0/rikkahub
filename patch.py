@@ -1,9 +1,5 @@
 import re, os
 
-# ============================================================
-# Tulpa Patch - clean version, no sed, no shit mountain
-# ============================================================
-
 MSG_FILE = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
 LIST_FILE = "app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
 
@@ -24,11 +20,11 @@ for root, dirs, files in os.walk(res_dir):
                 name_count += 1
 print(f"[1] App name: patched {name_count} files")
 
-# === 2. ChatMessage.kt - bubble colors + imports + wings ===
+# === 2. ChatMessage.kt ===
 with open(MSG_FILE, "r") as f:
     src = f.read()
 
-# 2a. Add imports (only if not already present)
+# 2a. Add imports
 if "import androidx.compose.foundation.BorderStroke" not in src:
     import_block = (
         "import androidx.compose.foundation.BorderStroke\n"
@@ -37,27 +33,19 @@ if "import androidx.compose.foundation.BorderStroke" not in src:
         "import androidx.compose.ui.layout.ContentScale\n"
         "import androidx.compose.ui.zIndex\n"
     )
-    # Insert after the last import line
     last_import = src.rfind("\nimport ")
     next_nl = src.find("\n", last_import + 1)
     src = src[:next_nl + 1] + import_block + src[next_nl + 1:]
     print("[2a] Imports added")
 
-# 2b. User bubble - replace entire Surface call
-# Original pattern (onClick version):
-#   Surface(
-#       modifier = Modifier.animateContentSize(),
-#       shape = RoundedCornerShape(16.dp),
-#       color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),
-#       onClick = { onUserMessageClick?.invoke() },
-#   )
+# 2b. User bubble - note: ends with ) { (trailing lambda)
 user_pattern = re.compile(
-    r'(Surface\(\s*)'
+    r'Surface\(\s*'
     r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
     r'shape\s*=\s*RoundedCornerShape\(16\.dp\),\s*'
     r'color\s*=\s*MaterialTheme\.colorScheme\.primaryContainer\.copy\(alpha\s*=\s*settings\.displaySetting\.bubbleOpacity\),\s*'
     r'onClick\s*=\s*\{\s*onUserMessageClick\?\.invoke\(\)\s*\},\s*'
-    r'\)',
+    r'\)\s*\{',
     re.DOTALL
 )
 
@@ -69,25 +57,19 @@ user_replacement = (
     "                                color = Color(0xFFFCE5EB),\n"
     "                                contentColor = Color(0xFFA36779),\n"
     "                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
-    "                            )"
+    "                            ) {"
 )
 
 src, n = user_pattern.subn(user_replacement, src)
 print(f"[2b] User bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
-# 2c. AI bubble - replace Surface call
-# Original pattern (no onClick):
-#   Surface(
-#       modifier = Modifier.animateContentSize(),
-#       shape = RoundedCornerShape(16.dp),
-#       color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),
-#   )
+# 2c. AI bubble - also ends with ) {
 ai_pattern = re.compile(
     r'Surface\(\s*'
     r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
     r'shape\s*=\s*RoundedCornerShape\(16\.dp\),\s*'
     r'color\s*=\s*MaterialTheme\.colorScheme\.surfaceContainerHigh\.copy\(alpha\s*=\s*settings\.displaySetting\.bubbleOpacity\),\s*'
-    r'\)',
+    r'\)\s*\{',
     re.DOTALL
 )
 
@@ -98,17 +80,16 @@ ai_replacement = (
     "                                        color = Color(0xFFFFFFFF),\n"
     "                                        contentColor = Color(0xFFA36779),\n"
     "                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
-    "                                    )"
+    "                                    ) {"
 )
 
 src, n = ai_pattern.subn(ai_replacement, src)
 print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
-# Save intermediate result
 with open(MSG_FILE, "w") as f:
     f.write(src)
 
-# === 2d. Wing injection (line-based) ===
+# === 2d. Wing injection ===
 with open(MSG_FILE, "r") as f:
     lines = f.readlines()
 
@@ -126,7 +107,6 @@ def inject_wing(color_keyword, drawable, align, offset_x):
     if color_line is None:
         print(f"  Wing ({drawable}): color line not found")
         return
-    # Find Surface( before color line
     surface_line = None
     for i in range(color_line, max(color_line - 10, 0), -1):
         if "Surface(" in lines[i]:
@@ -151,7 +131,6 @@ def inject_wing(color_keyword, drawable, align, offset_x):
     )
     lines.insert(surface_line, wing)
     print(f"  Wing ({drawable}): injected at line {surface_line}")
-    # Find Surface closing brace to close Box
     new_color = find_line(color_keyword)
     new_surface = None
     for i in range(new_color, max(new_color - 10, 0), -1):
@@ -173,20 +152,17 @@ def inject_wing(color_keyword, drawable, align, offset_x):
                 print(f"  Wing ({drawable}): Box closed at line {j + 1}")
                 return
 
-# User wing
 print("[2d] Injecting wings...")
 inject_wing("Color(0xFFFCE5EB)", "wing_right", "Alignment.TopEnd", "6.dp")
-# AI wing (re-read to get updated positions)
 inject_wing("Color(0xFFFFFFFF)", "wing_left", "Alignment.TopStart", "(-6).dp")
 
 with open(MSG_FILE, "w") as f:
     f.writelines(lines)
 print("[2d] Wings done")
 
-# === 3. ChatList.kt - reduce spacing ===
+# === 3. ChatList spacing ===
 with open(LIST_FILE, "r") as f:
     list_src = f.read()
-
 list_src = list_src.replace(
     "verticalArrangement = Arrangement.spacedBy(12.dp),",
     "verticalArrangement = Arrangement.spacedBy(4.dp),"
