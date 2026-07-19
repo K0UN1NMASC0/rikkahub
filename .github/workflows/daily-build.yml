@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
+    paths-ignore:
+      - '**.md'
 
 jobs:
   build:
@@ -49,6 +51,113 @@ jobs:
       - name: Write google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
+      - name: Process app icon
+        run: |
+          if [ -f "ic_launcher.png" ]; then
+            sudo apt-get install -y imagemagick
+            for size_dir in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+              dir=$(echo $size_dir | cut -d: -f1)
+              size=$(echo $size_dir | cut -d: -f2)
+              mkdir -p app/src/main/res/mipmap-${dir}
+              convert ic_launcher.png -resize ${size}x${size} app/src/main/res/mipmap-${dir}/ic_launcher.png
+              cp app/src/main/res/mipmap-${dir}/ic_launcher.png app/src/main/res/mipmap-${dir}/ic_launcher_round.png
+            done
+            rm -f app/src/main/res/mipmap-*/ic_launcher.webp
+            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webp
+            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+          fi
+
+      - name: Download wing decorations
+        run: |
+          mkdir -p app/src/main/res/drawable
+          curl -L "https://img.heliar.top/file/1779196710409_翅膀-右.png" -o app/src/main/res/drawable/wing_right.png
+          curl -L "https://img.heliar.top/file/1779196708496_翅膀-左.png" -o app/src/main/res/drawable/wing_left.png
+
+      - name: Apply bubble customization
+        run: |
+          python3 << 'PATCH_SCRIPT'
+          import re
+
+          # ===== Patch ChatMessage.kt =====
+          chat_msg_path = "app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
+          with open(chat_msg_path, "r") as f:
+              content = f.read()
+
+          # Add imports at the top (after existing imports)
+          extra_imports = """import androidx.compose.foundation.BorderStroke
+          import androidx.compose.foundation.Image
+          import androidx.compose.ui.res.painterResource
+          import androidx.compose.ui.layout.ContentScale
+          import androidx.compose.foundation.layout.offset
+          import androidx.compose.foundation.layout.wrapContentSize
+          import androidx.compose.ui.unit.IntOffset
+          """
+          # Insert after the last existing import line
+          last_import_pos = content.rfind("\nimport ")
+          next_newline = content.find("\n", last_import_pos + 1)
+          content = content[:next_newline+1] + extra_imports + content[next_newline+1:]
+
+          # Replace user bubble Surface
+          content = content.replace(
+              """Surface(
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),
+                                onClick = { onUserMessageClick?.invoke() },
+                            )""",
+              """Surface(
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(19.dp),
+                                color = Color(0xFFFCE5EB),
+                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                onClick = { onUserMessageClick?.invoke() },
+                            )"""
+          )
+
+          # Replace AI bubble Surface (with showAssistantBubble)
+          content = content.replace(
+              """Surface(
+                                        modifier = Modifier.animateContentSize(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),
+                                    )""",
+              """Surface(
+                                        modifier = Modifier.animateContentSize(),
+                                        shape = RoundedCornerShape(19.dp),
+                                        color = Color(0xFFFFFFFF),
+                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                    )"""
+          )
+
+          # Replace chain-of-thought bubble color
+          content = content.replace(
+              "containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),",
+              "containerColor = Color(0xFFFFFFFF).copy(alpha = settings.displaySetting.bubbleOpacity),"
+          )
+
+          with open(chat_msg_path, "w") as f:
+              f.write(content)
+
+          print("ChatMessage.kt patched successfully")
+
+          # ===== Patch ChatList.kt =====
+          chat_list_path = "app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
+          with open(chat_list_path, "r") as f:
+              content = f.read()
+
+          # Change message spacing from 12.dp to 4.dp
+          content = content.replace(
+              "verticalArrangement = Arrangement.spacedBy(12.dp),",
+              "verticalArrangement = Arrangement.spacedBy(4.dp),"
+          )
+
+          with open(chat_list_path, "w") as f:
+              f.write(content)
+
+          print("ChatList.kt patched successfully")
+          PATCH_SCRIPT
+
       - name: Build Debug APK
         run: |
           chmod +x gradlew
@@ -58,5 +167,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rikkahub-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*arm64*.apk
           retention-days: 7
