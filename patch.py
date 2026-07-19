@@ -38,7 +38,7 @@ if "import androidx.compose.foundation.BorderStroke" not in src:
     src = src[:next_nl + 1] + import_block + src[next_nl + 1:]
     print("[2a] Imports added")
 
-# 2b. User bubble - note: ends with ) { (trailing lambda)
+# 2b. User bubble
 user_pattern = re.compile(
     r'Surface\(\s*'
     r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
@@ -63,7 +63,7 @@ user_replacement = (
 src, n = user_pattern.subn(user_replacement, src)
 print(f"[2b] User bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
-# 2c. AI bubble - also ends with ) {
+# 2c. AI bubble
 ai_pattern = re.compile(
     r'Surface\(\s*'
     r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
@@ -88,77 +88,7 @@ print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
 with open(MSG_FILE, "w") as f:
     f.write(src)
-
-# === 2d. Wing injection ===
-with open(MSG_FILE, "r") as f:
-    lines = f.readlines()
-
-def find_line(keyword, start=0):
-    for i in range(start, len(lines)):
-        if keyword in lines[i]:
-            return i
-    return None
-
-def get_indent(line):
-    return line[:len(line) - len(line.lstrip())]
-
-def inject_wing(color_keyword, drawable, align, offset_x):
-    color_line = find_line(color_keyword)
-    if color_line is None:
-        print(f"  Wing ({drawable}): color line not found")
-        return
-    surface_line = None
-    for i in range(color_line, max(color_line - 10, 0), -1):
-        if "Surface(" in lines[i]:
-            surface_line = i
-            break
-    if surface_line is None:
-        print(f"  Wing ({drawable}): Surface not found")
-        return
-    indent = get_indent(lines[surface_line])
-    wing = (
-        f"{indent}Box {{\n"
-        f"{indent}    Image(\n"
-        f"{indent}        painter = painterResource(R.drawable.{drawable}),\n"
-        f"{indent}        contentDescription = null,\n"
-        f"{indent}        modifier = Modifier\n"
-        f"{indent}            .size(20.dp)\n"
-        f"{indent}            .align({align})\n"
-        f"{indent}            .offset(x = {offset_x}, y = (-6).dp)\n"
-        f"{indent}            .zIndex(10f),\n"
-        f"{indent}        contentScale = ContentScale.Fit\n"
-        f"{indent}    )\n"
-    )
-    lines.insert(surface_line, wing)
-    print(f"  Wing ({drawable}): injected at line {surface_line}")
-    new_color = find_line(color_keyword)
-    new_surface = None
-    for i in range(new_color, max(new_color - 10, 0), -1):
-        if "Surface(" in lines[i]:
-            new_surface = i
-            break
-    if new_surface:
-        brace = 0
-        started = False
-        for j in range(new_surface, min(new_surface + 40, len(lines))):
-            for ch in lines[j]:
-                if ch == '{':
-                    brace += 1
-                    started = True
-                elif ch == '}':
-                    brace -= 1
-            if started and brace == 0:
-                lines.insert(j + 1, f"{indent}}}\n")
-                print(f"  Wing ({drawable}): Box closed at line {j + 1}")
-                return
-
-print("[2d] Injecting wings...")
-inject_wing("Color(0xFFFCE5EB)", "wing_right", "Alignment.TopEnd", "6.dp")
-inject_wing("Color(0xFFFFFFFF)", "wing_left", "Alignment.TopStart", "(-6).dp")
-
-with open(MSG_FILE, "w") as f:
-    f.writelines(lines)
-print("[2d] Wings done")
+print("[2] Bubble patches saved")
 
 # === 3. ChatList spacing ===
 with open(LIST_FILE, "r") as f:
@@ -171,4 +101,4 @@ with open(LIST_FILE, "w") as f:
     f.write(list_src)
 print("[3] Spacing: OK")
 
-print("\n=== All patches complete ===")
+print("\n=== All patches complete (wings disabled for now) ===")
