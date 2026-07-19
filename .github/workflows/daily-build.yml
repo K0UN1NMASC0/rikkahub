@@ -1,7 +1,8 @@
 name: Build APK
 
 on:
-  workflow_dispatch:push:
+  workflow_dispatch:
+  push:
     branches: [ master ]
     paths-ignore:
       - '**.md'
@@ -12,7 +13,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4with:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           submodules: recursive
 
@@ -25,7 +27,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version:11
+          version: 11
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -91,7 +93,7 @@ jobs:
             N
             /surfaceContainerHigh/{
               s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                contentColor = Color(0xFFA36779),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
+              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                        contentColor = Color(0xFFA36779),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
             }
           }' "$MSG_FILE"
 
