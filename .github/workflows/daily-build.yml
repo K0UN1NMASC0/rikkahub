@@ -75,8 +75,9 @@ jobs:
           curl -L "https://img.heliar.top/file/1779196708496_%E7%BF%85%E8%86%80-%E5%B7%A6.png" -o app/src/main/res/drawable-xxhdpi/wing_left.png
 
       - name: Apply bubble customization
-        run: |
-          python3 patch.py
+        run: python3 patch.py
+          echo "=== DEBUG: Lines 375-390 ==="
+          sed -n '375,390p' app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt
           echo "=== Verification ==="
           MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
           LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
