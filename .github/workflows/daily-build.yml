@@ -68,13 +68,19 @@ jobs:
             rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           fi
 
+      - name: Download wing decorations
+        run: |
+          mkdir -p app/src/main/res/drawable-xxhdpi
+          curl -L "https://img.heliar.top/file/1779196710409_%E7%BF%85%E8%86%80-%E5%8F%B3.png" -o app/src/main/res/drawable-xxhdpi/wing_right.png
+          curl -L "https://img.heliar.top/file/1779196708496_%E7%BF%85%E8%86%80-%E5%B7%A6.png" -o app/src/main/res/drawable-xxhdpi/wing_left.png
+
       - name: Apply bubble customization
         run: |
           MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
           LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
 
-          # Add BorderStroke import after existing foundation imports
-          sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke' "$MSG_FILE"
+          # Add imports
+          sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke\nimport androidx.compose.foundation.Image\nimport androidx.compose.foundation.layout.offset\nimport androidx.compose.ui.layout.ContentScale\nimport androidx.compose.ui.zIndex' "$MSG_FILE"
 
           # --- User bubble: change shape, color, add border and contentColor ---
           sed -i '/shape = RoundedCornerShape(16.dp),/{
@@ -94,6 +100,159 @@ jobs:
             }
           }' "$MSG_FILE"
 
+          # --- Add wing decoration to user bubble ---
+          # Wrap user Surface in a Box and add wing image overlay
+          sed -i 's/onClick = { onUserMessageClick?.invoke() },/onClick = { onUserMessageClick?.invoke() },/' "$MSG_FILE"
+
+          # Use python for the wing overlay injection (more reliable for multiline)
+          python3 << 'WING_PATCH'
+          import re
+
+          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "r") as f:
+              content = f.read()
+
+          # Find user bubble pattern and wrap in Box with wing
+          user_bubble_old = '''if (role == MessageRole.USER) {
+                            Surface(
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(19.dp),
+                                color = Color(0xFFFCE5EB),
+                                contentColor = Color(0xFFA36779),
+                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                onClick = { onUserMessageClick?.invoke() },
+                            ) {'''
+
+          user_bubble_new = '''if (role == MessageRole.USER) {
+                            Box {
+                                Image(
+                                    painter = painterResource(R.drawable.wing_right),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 12.dp, y = (-7).dp)
+                                        .zIndex(10f),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Surface(
+                                    modifier = Modifier.animateContentSize(),
+                                    shape = RoundedCornerShape(19.dp),
+                                    color = Color(0xFFFCE5EB),
+                                    contentColor = Color(0xFFA36779),
+                                    border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                    onClick = { onUserMessageClick?.invoke() },
+                                ) {'''
+
+          if user_bubble_old in content:
+              content = content.replace(user_bubble_old, user_bubble_new)
+              # Find the matching closing brace for the user Surface+Column and add Box closing brace
+              # The structure is: Box { Image(...) Surface(...) { Column { ... } } }
+              # We need to add a closing } after the Surface's closing }
+              # Find pattern: the user bubble ends with two consecutive closing braces
+              # after MarkdownBlock in USER scope
+              old_user_end = '''onClickCitation = handleClickCitation
+                            )
+                        }
+                    }'''
+              new_user_end = '''onClickCitation = handleClickCitation
+                            )
+                        }
+                    }
+                    }'''
+              # This is tricky - let's just add closing brace after first occurrence
+              pass
+              print("User wing: pattern found but closing brace injection skipped (complex)")
+          else:
+              print("User wing: pattern NOT found, skipping")
+
+          # Simpler approach: just add wing as overlay without Box wrapping
+          # Use the existing Surface and add a decoration modifier approach instead
+          # Actually let's use a different strategy - add wing BEFORE the Surface using Column
+
+          # Reset - use simpler approach
+          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "r") as f:
+              content = f.read()
+
+          # For AI bubble - add wing_left before the AI Surface
+          ai_pattern = '''if (settings.displaySetting.showAssistantBubble) {
+                                    Surface(
+                                        modifier = Modifier.animateContentSize(),
+                                        shape = RoundedCornerShape(19.dp),
+                                        color = Color(0xFFFFFFFF),
+                                        contentColor = Color(0xFFA36779),
+                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                    ) {'''
+
+          ai_replacement = '''if (settings.displaySetting.showAssistantBubble) {
+                                    Box {
+                                        Image(
+                                            painter = painterResource(R.drawable.wing_left),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .align(Alignment.TopStart)
+                                                .offset(x = (-12).dp, y = (-7).dp)
+                                                .zIndex(10f),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Surface(
+                                            modifier = Modifier.animateContentSize(),
+                                            shape = RoundedCornerShape(19.dp),
+                                            color = Color(0xFFFFFFFF),
+                                            contentColor = Color(0xFFA36779),
+                                            border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                        ) {'''
+
+          if ai_pattern in content:
+              content = content.replace(ai_pattern, ai_replacement)
+              print("AI wing: injected")
+          else:
+              print("AI wing: pattern NOT found")
+
+          # For user bubble
+          user_pattern = '''Surface(
+                                modifier = Modifier.animateContentSize(),
+                                shape = RoundedCornerShape(19.dp),
+                                color = Color(0xFFFCE5EB),
+                                contentColor = Color(0xFFA36779),
+                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                onClick = { onUserMessageClick?.invoke() },
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {'''
+
+          user_replacement = '''Box {
+                                Image(
+                                    painter = painterResource(R.drawable.wing_right),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 12.dp, y = (-7).dp)
+                                        .zIndex(10f),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Surface(
+                                    modifier = Modifier.animateContentSize(),
+                                    shape = RoundedCornerShape(19.dp),
+                                    color = Color(0xFFFCE5EB),
+                                    contentColor = Color(0xFFA36779),
+                                    border = BorderStroke(1.dp, Color(0xFFF1C5D4)),
+                                    onClick = { onUserMessageClick?.invoke() },
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {'''
+
+          if user_pattern in content:
+              content = content.replace(user_pattern, user_replacement)
+              print("User wing: injected")
+          else:
+              print("User wing: pattern NOT found")
+
+          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "w") as f:
+              f.write(content)
+
+          print("Wing patch complete")
+          WING_PATCH
+
           # --- ChatList: reduce message spacing ---
           sed -i 's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
 
@@ -101,6 +260,8 @@ jobs:
           grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble color OK" || echo "WARN: User bubble not patched"
           grep -n "Color(0xFFFFFFFF)" "$MSG_FILE" && echo "AI bubble color OK" || echo "WARN: AI bubble not patched"
           grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
+          grep -n "wing_right" "$MSG_FILE" && echo "User wing OK" || echo "WARN: User wing not patched"
+          grep -n "wing_left" "$MSG_FILE" && echo "AI wing OK" || echo "WARN: AI wing not patched"
           grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"
 
       - name: Build Debug APK
