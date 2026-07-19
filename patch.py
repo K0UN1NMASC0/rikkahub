@@ -37,66 +37,83 @@ def find_line(lines, keyword, start=0, end=None):
 def get_indent(line):
     return line[:len(line) - len(line.lstrip())]
 
-def make_wing(indent, side):
-    drawable = "wing_right" if side == "right" else "wing_left"
-    align = "Alignment.TopEnd" if side == "right" else "Alignment.TopStart"
-    offset_x = "8.dp" if side == "right" else "(-8).dp"
-    return (
-        indent + "    Box {\n"
-        + indent + "        Image(\n"
-        + indent + "            painter = painterResource(R.drawable." + drawable + "),\n"
-        + indent + "            contentDescription = null,\n"
-        + indent + "            modifier = Modifier\n"
-        + indent + "                .size(16.dp)\n"
-        + indent + "                .align(" + align + ")\n"
-        + indent + "                .offset(x = " + offset_x + ", y = (-5).dp)\n"
-        + indent + "                .zIndex(10f),\n"
-        + indent + "            contentScale = ContentScale.Fit\n"
-        + indent + "        )\n")
-
-# --- User wing ---
+# --- User wing: find the Surface with Color(0xFFFCE5EB) ---
 user_color = find_line(lines, "Color(0xFFFCE5EB)")
 print(f"User color line: {user_color}")
+
 if user_color:
-    user_role = None
-    for i in range(user_color, max(user_color - 25, 0), -1):
-        if "MessageRole.USER" in lines[i] and "role ==" in lines[i]:
-            user_role = i
+    # Find the Surface( line before it
+    user_surface = None
+    for i in range(user_color, max(user_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            user_surface = i
             break
-    print(f"User role line: {user_role}")
-    if user_role:
-        indent = get_indent(lines[user_role])
-        wing = make_wing(indent, "right")
-        lines.insert(user_role + 1, wing)
-        print(f"User wing injected")
-        for j in range(user_color + 10, min(user_color + 50, len(lines))):
+    print(f"User Surface line: {user_surface}")
+    if user_surface:
+        indent = get_indent(lines[user_surface])
+        box_open = indent + "Box {\n"
+        wing_code = (
+            indent + "    Image(\n"
+            + indent + "        painter = painterResource(R.drawable.wing_right),\n"
+            + indent + "        contentDescription = null,\n"
+            + indent + "        modifier = Modifier\n"
+            + indent + "            .size(20.dp)\n"
+            + indent + "            .align(Alignment.TopEnd)\n"
+            + indent + "            .offset(x = 4.dp, y = (-4).dp)\n"
+            + indent + "            .zIndex(10f),\n"
+            + indent + "        contentScale = ContentScale.Fit\n"
+            + indent + "    )\n"
+        )
+        lines.insert(user_surface, box_open + wing_code)
+        print("User wing + Box open injected")
+
+        # Now find where user Surface block closes
+        # Look for the "} else {" that separates user from assistant
+        new_user_color = find_line(lines, "Color(0xFFFCE5EB)")
+        for j in range(new_user_color + 5, min(new_user_color + 30, len(lines))):
             if lines[j].strip() == "} else {":
-                lines.insert(j, indent + "    }\n")
+                lines.insert(j, indent + "}\n")
                 print(f"User Box closed at line {j}")
                 break
 
-# --- AI wing ---
+# --- AI wing: find the Surface with Color(0xFFFFFFFF) ---
 ai_color = find_line(lines, "Color(0xFFFFFFFF)")
 print(f"AI color line: {ai_color}")
+
 if ai_color:
-    ai_bubble = None
-    for i in range(ai_color, max(ai_color - 25, 0), -1):
-        if "showAssistantBubble" in lines[i]:
-            ai_bubble = i
+    ai_surface = None
+    for i in range(ai_color, max(ai_color - 10, 0), -1):
+        if "Surface(" in lines[i]:
+            ai_surface = i
             break
-    print(f"AI bubble line: {ai_bubble}")
-    if ai_bubble:
-        indent = get_indent(lines[ai_bubble])
-        wing = make_wing(indent, "left")
-        lines.insert(ai_bubble + 1, wing)
-        print(f"AI wing injected")
-        for j in range(ai_color + 10, min(ai_color + 50, len(lines))):
-            if lines[j].strip() == "} else {" and "showAssistantBubble" not in lines[j - 1]:
-                lines.insert(j, indent + "    }\n")
+    print(f"AI Surface line: {ai_surface}")
+    if ai_surface:
+        indent = get_indent(lines[ai_surface])
+        box_open = indent + "Box {\n"
+        wing_code = (
+            indent + "    Image(\n"
+            + indent + "        painter = painterResource(R.drawable.wing_left),\n"
+            + indent + "        contentDescription = null,\n"
+            + indent + "        modifier = Modifier\n"
+            + indent + "            .size(20.dp)\n"
+            + indent + "            .align(Alignment.TopStart)\n"
+            + indent + "            .offset(x = (-4).dp, y = (-4).dp)\n"
+            + indent + "            .zIndex(10f),\n"
+            + indent + "        contentScale = ContentScale.Fit\n"
+            + indent + "    )\n"
+        )
+        lines.insert(ai_surface, box_open + wing_code)
+        print("AI wing + Box open injected")
+
+        # Find where AI Surface block closes - look for "} else {"
+        new_ai_color = find_line(lines, "Color(0xFFFFFFFF)")
+        for j in range(new_ai_color + 5, min(new_ai_color + 30, len(lines))):
+            if lines[j].strip() == "} else {":
+                lines.insert(j, indent + "}\n")
                 print(f"AI Box closed at line {j}")
                 break
 
 with open(msg_file, "w") as f:
     f.writelines(lines)
 
-print("Wing patch complete")
+print("All patches complete")
