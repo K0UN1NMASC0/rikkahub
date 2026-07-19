@@ -76,32 +76,10 @@ jobs:
 
       - name: Apply bubble customization
         run: |
+          python3 patch.py
+          echo "=== Verification ==="
           MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
           LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
-
-          sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke\nimport androidx.compose.foundation.Image\nimport androidx.compose.foundation.layout.offset\nimport androidx.compose.ui.layout.ContentScale\nimport androidx.compose.ui.zIndex' "$MSG_FILE"
-
-          sed -i '/shape = RoundedCornerShape(16.dp),/{
-            N
-            /primaryContainer/{
-              s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                contentColor = Color(0xFFA36779),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
-            }
-          }' "$MSG_FILE"
-
-          sed -i '/shape = RoundedCornerShape(16.dp),/{
-            N
-            /surfaceContainerHigh/{
-              s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFFFFFF),\n                                        contentColor = Color(0xFFA36779),\n                                        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
-            }
-          }' "$MSG_FILE"
-
-          sed -i 's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
-
-          python3 patch.py
-
-          echo "=== Verification ==="
           grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble OK" || echo "WARN: User bubble not patched"
           grep -n "Color(0xFFFFFFFF)" "$MSG_FILE" && echo "AI bubble OK" || echo "WARN: AI bubble not patched"
           grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
