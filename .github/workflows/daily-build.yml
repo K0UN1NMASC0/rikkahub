@@ -1,7 +1,8 @@
 name: Build APK
 
 on:
-  workflow_dispatch:push:
+  workflow_dispatch:
+  push:
     branches: [ master ]
     paths-ignore:
       - '**.md'
@@ -12,7 +13,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4with:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           submodules: recursive
 
@@ -25,7 +27,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version:11
+          version: 11
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -53,7 +55,7 @@ jobs:
         run: |
           if [ -f "ic_launcher.png" ]; then
             sudo apt-get install -y imagemagick
-            for size_dir in mdpi:48hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            for size_dir in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
               dir=$(echo $size_dir | cut -d: -f1)
               size=$(echo $size_dir | cut -d: -f2)
               mkdir -p app/src/main/res/mipmap-${dir}
@@ -61,7 +63,8 @@ jobs:
               cp app/src/main/res/mipmap-${dir}/ic_launcher.png app/src/main/res/mipmap-${dir}/ic_launcher_round.png
             done
             rm -f app/src/main/res/mipmap-*/ic_launcher.webp
-            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webprm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webp
+            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
             rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           fi
 
@@ -76,19 +79,15 @@ jobs:
           MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
           LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
 
-          # Add imports
           sed -i '/^import androidx.compose.foundation.layout.widthIn/a import androidx.compose.foundation.BorderStroke\nimport androidx.compose.foundation.Image\nimport androidx.compose.foundation.layout.offset\nimport androidx.compose.ui.layout.ContentScale\nimport androidx.compose.ui.zIndex' "$MSG_FILE"
 
-          # --- User bubble ---
           sed -i '/shape = RoundedCornerShape(16.dp),/{
             N
             /primaryContainer/{
               s/shape = RoundedCornerShape(16.dp),/shape = RoundedCornerShape(19.dp),/
-              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                contentColor = Color(0xFFA36779),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/
-            }
+              s/color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),/color = Color(0xFFFCE5EB),\n                                contentColor = Color(0xFFA36779),\n                                border = BorderStroke(1.dp, Color(0xFFF1C5D4)),/}
           }' "$MSG_FILE"
 
-          # --- AI bubble ---
           sed -i '/shape = RoundedCornerShape(16.dp),/{
             N
             /surfaceContainerHigh/{
@@ -97,96 +96,12 @@ jobs:
             }
           }' "$MSG_FILE"
 
-          # --- Wing decoration injection ---
-          python3 << 'WING_PATCH'
-          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "r") as f:
-              lines = f.readlines()
+          sed -i's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
 
-          def find_line(lines, keyword, start=0):
-              for i in range(start, len(lines)):
-                  if keyword in lines[i]:
-                      return i
-              return None
+          python3 - << 'EOF'
+          import re, os
 
-          def get_indent(line):
-              return line[:len(line) - len(line.lstrip())]
-
-          # --- User wing ---
-          user_color_line = find_line(lines, "Color(0xFFFCE5EB)")
-          if user_color_line:
-              user_role_line = None
-              for i in range(user_color_line, max(user_color_line - 20, 0), -1):
-                  if "MessageRole.USER" in lines[i] and "role ==" in lines[i]:
-                      user_role_line = i
-                      break
-              if user_role_line:
-                  indent = get_indent(lines[user_role_line])
-                  wing_block = (
-                      indent + "    Box{\n"
-                      + indent + "        Image(\n"
-                      + indent + "            painter = painterResource(R.drawable.wing_right),\n"
-                      + indent + "            contentDescription = null,\n"
-                      + indent + "            modifier = Modifier\n"
-                      + indent + "                .size(16.dp)\n"
-                      + indent + "                .align(Alignment.TopEnd)\n"
-                      + indent + "                .offset(x = 8.dp, y = (-5).dp)\n"
-                      + indent + "                .zIndex(10f),\n"
-                      + indent + "            contentScale = ContentScale.Fit\n"
-                      + indent + "        )\n"
-                )
-                  lines.insert(user_role_line + 1, wing_block)  print(f"User wing injected after line {user_role_line}")  # Find matching } else { to close Box
-                  for j in range(user_color_line + 10, min(user_color_line + 40, len(lines))):
-                      if lines[j].strip() == "} else {":
-                          lines.insert(j, indent + "    }\n")
-                          print(f"User Box closed at line {j}")
-                          breakelse:
-                  print("User wing: MessageRole.USER line not found")
-          else:
-              print("User wing: Color line not found")
-
-          # --- AI wing ---
-          ai_color_line = find_line(lines, "Color(0xFFFFFFFF)")
-          if ai_color_line:
-              ai_bubble_line = None
-              for i in range(ai_color_line, max(ai_color_line - 20, 0), -1):
-                  if "showAssistantBubble" in lines[i]:
-                      ai_bubble_line = i
-                      break
-              if ai_bubble_line:
-                  indent = get_indent(lines[ai_bubble_line])
-                  wing_block = (
-                      indent + "    Box {\n"
-                      + indent + "        Image(\n"
-                      + indent + "            painter = painterResource(R.drawable.wing_left),\n"
-                      + indent + "            contentDescription = null,\n"
-                      + indent + "            modifier = Modifier\n"
-                      + indent + "                .size(16.dp)\n"
-                      + indent + "                .align(Alignment.TopStart)\n"
-                      + indent + "                .offset(x = (-8).dp, y = (-5).dp)\n"
-                      + indent + "                .zIndex(10f),\n"
-                      + indent + "            contentScale = ContentScale.Fit\n"
-                      + indent + "        )\n"
-                  )
-                  lines.insert(ai_bubble_line + 1, wing_block)
-                  print(f"AI wing injected after line {ai_bubble_line}")
-
-                  # Find closing } else { after AI bubble
-                  for j in range(ai_color_line + 10, min(ai_color_line + 40, len(lines))):
-                      if lines[j].strip() == "} else {" and "showAssistantBubble" not in lines[j-1]:
-                          lines.insert(j, indent + "    }\n")
-                          print(f"AI Box closed at line {j}")
-                          break
-              else:
-                  print("AI wing: showAssistantBubble line not found")
-          else:
-              print("AI wing: Color line not found")
-
-          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "w") as f:
-              f.writelines(lines)print("Wing patch complete")
-          WING_PATCH# --- App name: Tulpa (all locales) ---
-          python3 << 'NAME_PATCH'
-          import os, re
-
+          # === App name patch ===
           res_dir = "app/src/main/res"
           count = 0
           for root, dirs, files in os.walk(res_dir):
@@ -203,13 +118,95 @@ jobs:
                       if new_content != content:
                           with open(fpath, "w", encoding="utf-8") as f:
                               f.write(new_content)
-                          print(f"Patched: {fpath}")
+                          print(f"App name patched: {fpath}")
                           count += 1
           print(f"App name patched in {count} files")
-          NAME_PATCH
 
-          # --- ChatList spacing ---
-          sed -i 's/verticalArrangement = Arrangement.spacedBy(12.dp),/verticalArrangement = Arrangement.spacedBy(4.dp),/' "$LIST_FILE"
+          # === Wing patch ===
+          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "r") as f:
+              lines = f.readlines()
+
+          def find_line(lines, keyword, start=0, end=None):
+              end = end or len(lines)
+              for i in range(start, end):
+                  if keyword in lines[i]:
+                      return i
+              return None
+
+          def get_indent(line):
+              return line[:len(line) - len(line.lstrip())]
+
+          # User wing
+          user_color = find_line(lines, "Color(0xFFFCE5EB)")
+          if user_color:
+              user_role = None
+              for i in range(user_color, max(user_color - 25, 0), -1):
+                  if "MessageRole.USER" in lines[i] and "role ==" in lines[i]:
+                      user_role = i
+                      break
+              if user_role:
+                  indent = get_indent(lines[user_role])
+                  wing = (
+                      indent + "    Box{\n"
+                      + indent + "        Image(\n"
+                      + indent + "            painter = painterResource(R.drawable.wing_right),\n"
+                      + indent + "            contentDescription = null,\n"
+                      + indent + "            modifier = Modifier\n"
+                      + indent + "                .size(16.dp)\n"
+                      + indent + "                .align(Alignment.TopEnd)\n"
+                      + indent + "                .offset(x = 8.dp, y = (-5).dp)\n"
+                      + indent + "                .zIndex(10f),\n"
+                      + indent + "            contentScale = ContentScale.Fit\n"
+                      + indent + "        )\n"
+                )
+                  lines.insert(user_role + 1, wing)  print(f"User wing injected at line {user_role + 1}")  for j in range(user_color + 10, min(user_color + 45, len(lines))):
+                      if lines[j].strip() == "} else {":
+                          lines.insert(j, indent + "    }\n")
+                          print(f"User Box closed at line {j}")
+                          break
+              else:
+                  print("User wing: role line not found")else:
+              print("User wing: color line not found")
+
+          # AI wing
+          ai_color = find_line(lines, "Color(0xFFFFFFFF)")
+          if ai_color:
+              ai_bubble = None
+              for i in range(ai_color, max(ai_color - 25, 0), -1):
+                  if "showAssistantBubble" in lines[i]:
+                      ai_bubble = i
+                      break
+              if ai_bubble:
+                  indent = get_indent(lines[ai_bubble])
+                  wing = (
+                      indent + "    Box {\n"
+                      + indent + "        Image(\n"
+                      + indent + "            painter = painterResource(R.drawable.wing_left),\n"
+                      + indent + "            contentDescription = null,\n"
+                      + indent + "            modifier = Modifier\n"
+                      + indent + "                .size(16.dp)\n"
+                      + indent + "                .align(Alignment.TopStart)\n"
+                      + indent + "                .offset(x = (-8).dp, y = (-5).dp)\n"
+                      + indent + "                .zIndex(10f),\n"
+                      + indent + "            contentScale = ContentScale.Fit\n"
+                      + indent + "        )\n"
+                  )
+                  lines.insert(ai_bubble + 1, wing)
+                  print(f"AI wing injected at line {ai_bubble + 1}")
+                  for j in range(ai_color + 10, min(ai_color + 45, len(lines))):
+                      if lines[j].strip() == "} else {" and "showAssistantBubble" not in lines[j - 1]:
+                          lines.insert(j, indent + "    }\n")
+                          print(f"AI Box closed at line {j}")
+                          break
+              else:
+                  print("AI wing: showAssistantBubble line not found")
+          else:
+              print("AI wing: color line not found")
+
+          with open("app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt", "w") as f:
+              f.writelines(lines)
+
+          print("All patches complete")EOF
 
           echo "=== Verification ==="
           grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble OK" || echo "WARN: User bubble not patched"
@@ -217,8 +214,10 @@ jobs:
           grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
           grep -n "wing_right" "$MSG_FILE" && echo "User wing OK" || echo "WARN: User wing not patched"
           grep -n "wing_left" "$MSG_FILE" && echo "AI wing OK" || echo "WARN: AI wing not patched"
-          grep -rn "Tulpa" app/src/main/res/values*/strings.xml && echo "App name OK" || echo "WARN: App name not patched"
-          grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"- name: Build Debug APK
+          grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"
+          grep -rn "Tulpa" app/src/main/res/values/strings.xml && echo "App name OK" || echo "WARN: App name not patched"
+
+      - name: Build Debug APK
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
