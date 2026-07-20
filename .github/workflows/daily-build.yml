@@ -13,10 +13,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
+      - uses: actions/checkout@v4with:
+          fetch-depth: 0submodules: recursive
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -63,32 +61,33 @@ jobs:
               cp app/src/main/res/mipmap-${dir}/ic_launcher.png app/src/main/res/mipmap-${dir}/ic_launcher_round.png
             done
             rm -f app/src/main/res/mipmap-*/ic_launcher.webp
-            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webp
-            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webprm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
             rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           fi
 
-      - name: Download wing decorations
+      - name: Copy proactive message feature
         run: |
-          mkdir -p app/src/main/res/drawable-xxhdpi
-          curl -L "https://img.heliar.top/file/1779196710409_%E7%BF%85%E8%86%80-%E5%8F%B3.png" -o app/src/main/res/drawable-xxhdpi/wing_right.png
-          curl -L "https://img.heliar.top/file/1779196708496_%E7%BF%85%E8%86%80-%E5%B7%A6.png" -o app/src/main/res/drawable-xxhdpi/wing_left.png
+          TARGET="app/src/main/java/me/rerere/rikkahub/data/service"
+          mkdir -p "$TARGET"
+          if [ -d "proactive" ]; then
+            cp proactive/*.kt "$TARGET/"
+            echo "Proactive message files copied:"
+            ls proactive/*.kt
+          else
+            echo "No proactive/ folder found, skipping"
+          fi
 
-      - name: Apply bubble customization
+      - name: Apply customization
         run: |
           python3 patch.py
-          echo "=== DEBUG Lines 370-395 ==="
-          sed -n '370,395p' app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt
           echo "=== Verification ==="
           MSG_FILE="app/src/main/java/me/rerere/rikkahub/ui/components/message/ChatMessage.kt"
           LIST_FILE="app/src/main/java/me/rerere/rikkahub/ui/pages/chat/ChatList.kt"
           grep -n "Color(0xFFFCE5EB)" "$MSG_FILE" && echo "User bubble OK" || echo "WARN: User bubble not patched"
           grep -n "Color(0xFFFFFFFF)" "$MSG_FILE" && echo "AI bubble OK" || echo "WARN: AI bubble not patched"
-          grep -n "Color(0xFFA36779)" "$MSG_FILE" && echo "Text color OK" || echo "WARN: Text color not patched"
-          grep -n "wing_right" "$MSG_FILE" && echo "User wing OK" || echo "WARN: User wing not patched"
-          grep -n "wing_left" "$MSG_FILE" && echo "AI wing OK" || echo "WARN: AI wing not patched"
           grep -n "spacedBy(4.dp)" "$LIST_FILE" && echo "Spacing OK" || echo "WARN: Spacing not patched"
           grep -n "Tulpa" app/src/main/res/values/strings.xml && echo "App name OK" || echo "WARN: App name not patched"
+          grep -n "ProactiveMessageReceiver" app/src/main/AndroidManifest.xml && echo "Manifest OK" || echo "WARN: Manifest not patched"
 
       - name: Build Debug APK
         run: |
