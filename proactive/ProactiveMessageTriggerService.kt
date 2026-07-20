@@ -82,7 +82,9 @@ class ProactiveMessageTriggerService : Service() {
         val assistant = settings.getCurrentAssistant()
 
         // 找 provider
-        val provider = settings.providers.firstOrNull { it.apiKey.isNotBlank() }
+        val provider = settings.providers.firstOrNull { 
+            it is me.rerere.ai.provider.ProviderSetting.OpenAI && it.apiKey.isNotBlank()
+        } as? me.rerere.ai.provider.ProviderSetting.OpenAI
             ?: run { Log.w(TAG, "No provider found"); return }
 
         val baseUrl = provider.baseUrl.trimEnd('/')
