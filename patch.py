@@ -34,12 +34,8 @@ with open(MSG_FILE, "r") as f:
 if "import androidx.compose.foundation.BorderStroke" not in src:
     import_block = (
         "import androidx.compose.foundation.BorderStroke\n"
-        "import androidx.compose.foundation.Image\n"
-        "import androidx.compose.foundation.layout.offset\n"
         "import androidx.compose.foundation.layout.width\n"
         "import androidx.compose.foundation.layout.IntrinsicSize\n"
-        "import androidx.compose.ui.layout.ContentScale\n"
-        "import androidx.compose.ui.zIndex\n"
     )
     last_import = src.rfind("\nimport ")
     next_nl = src.find("\n", last_import + 1)
@@ -60,15 +56,14 @@ user_pattern = re.compile(
 def user_repl(m):
     indent = m.group(1)
     return (
-        f"{indent}Box(modifier = Modifier.width(IntrinsicSize.Min)) {{\n"
-        f"{indent}    Surface(\n"
-        f"{indent}        onClick = {{ onUserMessageClick?.invoke() }},\n"
-        f"{indent}        modifier = Modifier.animateContentSize(),\n"
-        f"{indent}        shape = RoundedCornerShape(19.dp),\n"
-        f"{indent}        color = Color(0xFFFCE5EB),\n"
-        f"{indent}        contentColor = Color(0xFFA36779),\n"
-        f"{indent}        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
-        f"{indent}    ) {{"
+        f"{indent}Surface(\n"
+        f"{indent}    onClick = {{ onUserMessageClick?.invoke() }},\n"
+        f"{indent}    modifier = Modifier.animateContentSize(),\n"
+        f"{indent}    shape = RoundedCornerShape(19.dp),\n"
+        f"{indent}    color = Color(0xFFFCE5EB),\n"
+        f"{indent}    contentColor = Color(0xFFA36779),\n"
+        f"{indent}    border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
+        f"{indent}) {{"
     )
 
 src, n = user_pattern.subn(user_repl, src)
@@ -87,78 +82,20 @@ ai_pattern = re.compile(
 def ai_repl(m):
     indent = m.group(1)
     return (
-        f"{indent}Box(modifier = Modifier.width(IntrinsicSize.Min)) {{\n"
-        f"{indent}    Surface(\n"
-        f"{indent}        modifier = Modifier.animateContentSize(),\n"
-        f"{indent}        shape = RoundedCornerShape(19.dp),\n"
-        f"{indent}        color = Color(0xFFFFFFFF),\n"
-        f"{indent}        contentColor = Color(0xFFA36779),\n"
-        f"{indent}        border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
-        f"{indent}    ) {{"
+        f"{indent}Surface(\n"
+        f"{indent}    modifier = Modifier.animateContentSize(),\n"
+        f"{indent}    shape = RoundedCornerShape(19.dp),\n"
+        f"{indent}    color = Color(0xFFFFFFFF),\n"
+        f"{indent}    contentColor = Color(0xFFA36779),\n"
+        f"{indent}    border = BorderStroke(1.dp, Color(0xFFF1C5D4)),\n"
+        f"{indent}) {{"
     )
 
 src, n = ai_pattern.subn(ai_repl, src)
 print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
-# 2d. Insert wings after Surface closes, then close Box
-def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, alignment):
-    pos = src.find(color_marker)
-    if pos == -1:
-        print(f"  Wing ({color_marker}): marker not found")
-        return src
-    surface_start = src.rfind("Surface(", 0, pos)
-    paren_depth = 0
-    i = surface_start + len("Surface(")
-    while i < len(src):
-        if src[i] == '(':
-            paren_depth += 1
-        elif src[i] == ')':
-            if paren_depth == 0:
-                break
-            paren_depth -= 1
-        i += 1
-    brace_start = src.find("{", i)
-    depth = 0
-    i = brace_start
-    while i < len(src):
-        if src[i] == '{':
-            depth += 1
-        elif src[i] == '}':
-            depth -= 1
-            if depth == 0:
-                line_end = src.find('\n', i)
-                if line_end == -1:
-                    line_end = len(src)
-                line_start = src.rfind('\n', 0, surface_start) + 1
-                surface_indent = ""
-                for ch in src[line_start:]:
-                    if ch in ' \t':
-                        surface_indent += ch
-                    else:
-                        break
-                wing_code = (
-                    f"{surface_indent}Image(\n"
-                    f"{surface_indent}    painter = painterResource(R.drawable.{drawable}),\n"
-                    f"{surface_indent}    contentDescription = null,\n"
-                    f"{surface_indent}    modifier = Modifier\n"
-                    f"{surface_indent}        .align({alignment})\n"
-                    f"{surface_indent}        .size(20.dp)\n"
-                    f"{surface_indent}        .offset(x = {wing_x}, y = {wing_y})\n"
-                    f"{surface_indent}        .zIndex(10f),\n"
-                    f"{surface_indent}    contentScale = ContentScale.Fit\n"
-                    f"{surface_indent})\n"
-                )
-                box_indent = surface_indent[4:] if len(surface_indent) >= 4 else ""
-                insert = wing_code + box_indent + "}\n"
-                src = src[:line_end + 1] + insert + src[line_end + 1:]
-                print(f"  Wing ({color_marker}): inserted")
-                return src
-        i += 1
-    print(f"  Wing ({color_marker}): could not find closing brace")
-    return src
-
-src = insert_wing_after_surface(src, "Color(0xFFFCE5EB)", "wing_right", USER_WING_X, USER_WING_Y, "Alignment.TopEnd")
-src = insert_wing_after_surface(src, "Color(0xFFFFFFFF)", "wing_left", AI_WING_X, AI_WING_Y, "Alignment.TopStart")
+# 2d. Remove wings - already removed, just keeping the replacement logic
+print("[2d] Wings: skipped (removed)")
 
 with open(MSG_FILE, "w") as f:
     f.write(src)
