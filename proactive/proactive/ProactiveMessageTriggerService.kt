@@ -12,11 +12,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.rerere.ai.core.MessageRole
+import me.rerere.ai.ui.UIMessage
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.CHAT_COMPLETED_NOTIFICATION_CHANNEL_ID
 import me.rerere.rikkahub.RouteActivity
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.getCurrentAssistant
+import me.rerere.rikkahub.data.model.Conversation
+import me.rerere.rikkahub.data.model.MessageNode
 import me.rerere.rikkahub.data.model.toMessageNode
 import me.rerere.rikkahub.data.repository.ConversationRepository
 import me.rerere.rikkahub.utils.sendNotification
@@ -28,6 +31,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.koin.android.ext.android.inject
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -63,7 +67,6 @@ class ProactiveMessageTriggerService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Proactive message failed", e)
             } finally {
-                // 安排下一次
                 val prefs = getSharedPreferences(ProactiveMessageReceiver.PREFS_NAME, Context.MODE_PRIVATE)
                 val min = prefs.getInt(ProactiveMessageReceiver.KEY_MIN_INTERVAL, 60)
                 val max = prefs.getInt(ProactiveMessageReceiver.KEY_MAX_INTERVAL, 180)
@@ -77,12 +80,10 @@ class ProactiveMessageTriggerService : Service() {
     private suspend fun trigger() {
         val settings = settingsStore.settingsFlow.first()
         val assistant = settings.getCurrentAssistant()
-        val prefs = getSharedPreferences(ProactiveMessageReceiver.PREFS_NAME, Context.MODE_PRIVATE)
-        val minInterval = prefs.getInt(ProactiveMessageReceiver.KEY_MIN_INTERVAL, 60)
-        val maxInterval = prefs.getInt(ProactiveMessageReceiver.KEY_MAX_INTERVAL, 180)
 
         // 找 provider
-        val provider = settings.providers.firstOrNull { it.apiKey.isNotBlank() }?: run { Log.w(TAG, "No provider found"); return }
+        val provider = settings.providers.firstOrNull { it.apiKey.isNotBlank() }
+            ?: run { Log.w(TAG, "No provider found"); return }
 
         val baseUrl = provider.baseUrl.trimEnd('/')
         val apiKey = provider.apiKey
@@ -91,27 +92,21 @@ class ProactiveMessageTriggerService : Service() {
 
         // 读最近对话
         val recentConvs = conversationRepository.getRecentConversations(assistant.id, limit = 1)
-        val conversation = recentConvs.firstOrNull()?.let {
-            conversationRepository.getConversationById(it.id)
-        }
+        val conversation = recentConvs.firstOrNull()
 
         // 距上次聊天时间
-        val lastCreatedAt = conversation?.messageNodes?.lastOrNull()
-            ?.messages?.lastOrNull()?.createdAt
-        val idleMinutes = if (lastCreatedAt != null) {
-            val lastMs = try {
-                kotlinx.datetime.LocalDateTime(
-                    lastCreatedAt.year, lastCreatedAt.monthNumber, lastCreatedAt.dayOfMonth,
-                    lastCreatedAt.hour, lastCreatedAt.minute, lastCreatedAt.second
-                ).toInstant(kotlinx.datetime.TimeZone.currentSystemDefault()).toEpochMilliseconds()
-            } catch (e: Exception) { 0L }
-            ((System.currentTimeMillis() - lastMs) / 60000L).toInt()
+        val lastUpdateAt = conversation?.updateAt
+        val idleMinutes = if (lastUpdateAt != null) {
+            ((System.currentTimeMillis() - lastUpdateAt.toEpochMilli()) / 60000L).toInt()
         } else 9999
 
-        val currentTimeStr = SimpleDateFormat("yyyy年MM月dd日 HH:mmEEEE", Locale.CHINESE).format(Date())
+        val currentTimeStr = SimpleDateFormat("yyyy年MM月dd日 HH:mm EEEE", Locale.CHINESE).format(Date())
 
         // 历史消息（最近10条）
-        val historyMessages = conversation?.currentMessages?.takeLast(10) ?: emptyList()
+        val historyMessages: List<UIMessage> = conversation?.messageNodes
+            ?.flatMap { it.messages }
+            ?.takeLast(10)
+            ?: emptyList()
 
         // 构建 system prompt
         val systemPrompt = buildString {
@@ -122,7 +117,7 @@ class ProactiveMessageTriggerService : Service() {
             appendLine("<time_reminder>现在时间：$currentTimeStr</time_reminder>")
             appendLine()
             appendLine("## 主动消息")
-            appendLine("距上次聊天约${idleMinutes} 分钟。")
+            appendLine("距上次聊天约${idleMinutes}分钟。")
             appendLine("你现在可以主动给用户发一条消息。")
             appendLine("规则：")
             appendLine("- 没什么好说的，或用户刚说了去睡觉且不到5小时 → 只回复 [PASS]")
@@ -162,6 +157,8 @@ class ProactiveMessageTriggerService : Service() {
             .post(body)
             .build()
 
+        Log.d(TAG, "Calling API: model=$modelId, history=${historyMessages.size}, idle=${idleMinutes}min")
+
         val response = httpClient.newCall(request).execute()
         if (!response.isSuccessful) {
             Log.e(TAG, "API error: ${response.code} ${response.body?.string()}")
@@ -175,7 +172,7 @@ class ProactiveMessageTriggerService : Service() {
             .getString("content")
             .trim()
 
-        Log.d(TAG, "AI reply: $replyText")
+        Log.d(TAG, "AI reply: ${replyText.take(80)}")
 
         if (replyText.isBlank() || replyText.contains("[PASS]", ignoreCase = true)) {
             Log.d(TAG, "AI chose to skip")
@@ -183,27 +180,36 @@ class ProactiveMessageTriggerService : Service() {
         }
 
         // 写入对话历史
-        val convId = conversation?.id ?: Uuid.random()
-        val aiMessage = me.rerere.ai.ui.UIMessage(
+        val aiMessage = UIMessage(
             role = MessageRole.ASSISTANT,
             parts = listOf(UIMessagePart.Text(replyText))
         )
+        val aiNode = aiMessage.toMessageNode()
 
-        val existingConv = conversation?: me.rerere.rikkahub.data.model.Conversation(
-            id = convId,
-            assistantId = assistant.id,
-            title = "",
-            messageNodes = emptyList()
-        )
-        val updatedConv = existingConv.copy(
-            messageNodes = existingConv.messageNodes + aiMessage.toMessageNode()
-        )
-        conversationRepository.saveConversation(updatedConv)
+        if (conversation != null) {
+            // 追加到已有对话
+            val updatedConv = conversation.copy(
+                messageNodes = conversation.messageNodes + aiNode,
+                updateAt = Instant.now()
+            )
+            conversationRepository.updateConversation(updatedConv)
+        } else {
+            // 新建对话
+            val newConv = Conversation(
+                id = Uuid.random(),
+                assistantId = assistant.id,
+                title = "",
+                messageNodes = listOf(aiNode),
+                createAt = Instant.now(),
+                updateAt = Instant.now()
+            )
+            conversationRepository.insertConversation(newConv)
+        }
 
         // 发通知
+        val convId = conversation?.id ?: Uuid.random()
         val pendingIntent = android.app.PendingIntent.getActivity(
-            this,
-            0,
+            this, 0,
             Intent(this, RouteActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("conversationId", convId.toString())
@@ -222,6 +228,6 @@ class ProactiveMessageTriggerService : Service() {
             contentIntent = pendingIntent
         }
 
-        Log.d(TAG, "Proactive message sent: ${replyText.take(50)}")
+        Log.d(TAG, "Proactive message saved and notified")
     }
 }
