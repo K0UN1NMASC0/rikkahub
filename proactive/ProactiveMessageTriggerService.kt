@@ -87,7 +87,7 @@ class ProactiveMessageTriggerService : Service() {
 
         val baseUrl = provider.baseUrl.trimEnd('/')
         val apiKey = provider.apiKey
-        val modelId = assistant.chatModelId ?: settings.chatModelId
+        val modelId = (assistant.chatModelId ?: settings.chatModelId).toString()
         if (modelId.isBlank()) { Log.w(TAG, "No model ID"); return }
 
         // 读最近对话
