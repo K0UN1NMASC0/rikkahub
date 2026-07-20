@@ -146,4 +146,23 @@ if changed:
 else:
     print("[5] Manifest: already registered")
 
+# ===6. 自动启动主动消息 ===
+APP_FILE = "app/src/main/java/me/rerere/rikkahub/RikkaHubApp.kt"
+with open(APP_FILE, "r") as f:
+    app_src = f.read()
+
+schedule_call = "me.rerere.rikkahub.data.service.ProactiveMessageReceiver.schedule(this, 180, 180)\n"
+trigger = "this.createNotificationChannel()"
+
+if "ProactiveMessageReceiver.schedule" not in app_src and trigger in app_src:
+    app_src = app_src.replace(
+        trigger,
+        trigger + "\n" + schedule_call
+    )
+    with open(APP_FILE, "w") as f:
+        f.write(app_src)
+    print("[6] Auto-start: injected")
+else:
+    print("[6] Auto-start: already injected or trigger not found")
+
 print("\n=== All patches complete ===")
