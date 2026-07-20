@@ -9,7 +9,7 @@ USER_WING_Y = "(-6).dp"
 AI_WING_X = "(-6).dp"
 AI_WING_Y = "(-6).dp"
 
-# === 1. App name → Tulpa ===
+# === 1. App name -> Tulpa ===
 res_dir = "app/src/main/res"
 name_count = 0
 for root, dirs, files in os.walk(res_dir):
@@ -37,6 +37,7 @@ if "import androidx.compose.foundation.BorderStroke" not in src:
         "import androidx.compose.foundation.Image\n"
         "import androidx.compose.foundation.layout.offset\n"
         "import androidx.compose.foundation.layout.wrapContentSize\n"
+        "import androidx.compose.foundation.layout.wrapContentWidth\n"
         "import androidx.compose.ui.layout.ContentScale\n"
         "import androidx.compose.ui.zIndex\n"
     )
@@ -51,7 +52,7 @@ user_pattern = re.compile(
     r'modifier\s*=\s*Modifier\.animateContentSize\(\),\s*'
     r'shape\s*=\s*RoundedCornerShape\(16\.dp\),\s*'
     r'color\s*=\s*MaterialTheme\.colorScheme\.primaryContainer\.copy\(alpha\s*=\s*settings\.displaySetting\.bubbleOpacity\),\s*'
-    r'onClick\s*=\s*\{\s*onUserMessageClick\?\.invoke\(\)\s*\},\s*'
+    r'onClick\s*=\s*\{\s*onUserMessageClick\?\.invoke\(\)\s*\},?\s*'
     r'\)\s*\{)',
     re.DOTALL
 )
@@ -59,7 +60,7 @@ user_pattern = re.compile(
 def user_repl(m):
     indent = m.group(1)
     return (
-        f"{indent}Box {{\n"
+        f"{indent}Box(modifier = Modifier.wrapContentWidth(Alignment.End)) {{\n"
         f"{indent}    Surface(\n"
         f"{indent}        onClick = {{ onUserMessageClick?.invoke() }},\n"
         f"{indent}        modifier = Modifier.animateContentSize(),\n"
@@ -107,10 +108,8 @@ def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, align
         print(f"  Wing ({color_marker}): marker not found")
         return src
     surface_start = src.rfind("Surface(", 0, pos)
-    # find opening brace of Surface's trailing lambda
     paren_depth = 0
     i = surface_start + len("Surface(")
-    # skip to the closing ) of Surface(...)
     while i < len(src):
         if src[i] == '(':
             paren_depth += 1
@@ -119,9 +118,7 @@ def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, align
                 break
             paren_depth -= 1
         i += 1
-    # now find the { after )
     brace_start = src.find("{", i)
-    # count braces to find Surface block end
     depth = 0
     i = brace_start
     while i < len(src):
@@ -130,11 +127,9 @@ def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, align
         elif src[i] == '}':
             depth -= 1
             if depth == 0:
-                # i is the position of Surface's closing }
                 line_end = src.find('\n', i)
                 if line_end == -1:
                     line_end = len(src)
-                # determine indent
                 line_start = src.rfind('\n', 0, surface_start) + 1
                 surface_indent = ""
                 for ch in src[line_start:]:
@@ -142,22 +137,18 @@ def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, align
                         surface_indent += ch
                     else:
                         break
-                # wing goes after Surface }, before Box }
-                # Surface is indented 4 spaces inside Box, so wing also at same level
                 wing_code = (
                     f"{surface_indent}Image(\n"
                     f"{surface_indent}    painter = painterResource(R.drawable.{drawable}),\n"
                     f"{surface_indent}    contentDescription = null,\n"
                     f"{surface_indent}    modifier = Modifier\n"
-                    f"{surface_indent}        .matchParentSize()\n"
-                    f"{surface_indent}        .wrapContentSize(align = {alignment})\n"
+                    f"{surface_indent}        .align({alignment})\n"
                     f"{surface_indent}        .size(20.dp)\n"
                     f"{surface_indent}        .offset(x = {wing_x}, y = {wing_y})\n"
                     f"{surface_indent}        .zIndex(10f),\n"
                     f"{surface_indent}    contentScale = ContentScale.Fit\n"
                     f"{surface_indent})\n"
                 )
-                # Box closing brace at one indent level less
                 box_indent = surface_indent[4:] if len(surface_indent) >= 4 else ""
                 insert = wing_code + box_indent + "}\n"
                 src = src[:line_end + 1] + insert + src[line_end + 1:]
