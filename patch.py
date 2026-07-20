@@ -26,14 +26,14 @@ with open(MSG_FILE, "r") as f:
 
 # 2a. Add imports
 if "import androidx.compose.foundation.BorderStroke" not in src:
-import_block = (
-    "import androidx.compose.foundation.BorderStroke\n"
-    "import androidx.compose.foundation.Image\n"
-    "import androidx.compose.foundation.layout.offset\n"
-    "import androidx.compose.foundation.layout.wrapContentSize\n"
-    "import androidx.compose.ui.layout.ContentScale\n"
-    "import androidx.compose.ui.zIndex\n"
-)
+    import_block = (
+        "import androidx.compose.foundation.BorderStroke\n"
+        "import androidx.compose.foundation.Image\n"
+        "import androidx.compose.foundation.layout.offset\n"
+        "import androidx.compose.foundation.layout.wrapContentSize\n"
+        "import androidx.compose.ui.layout.ContentScale\n"
+        "import androidx.compose.ui.zIndex\n"
+    )
     last_import = src.rfind("\nimport ")
     next_nl = src.find("\n", last_import + 1)
     src = src[:next_nl + 1] + import_block + src[next_nl + 1:]
@@ -118,27 +118,14 @@ src, n = ai_pattern.subn(ai_repl, src)
 print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
 # 2d. Close Box after each Surface block
-# Strategy: find the closing } of Surface's trailing lambda content,
-# then add a } to close Box after it.
-# The Surface block structure is: Surface(...) { Column(...) { ... } }
-# So we need to find TWO closing braces after "Color(0xFFFCE5EB)" (Column close + Surface close)
-# then add Box close.
-
 def add_box_close_after_surface(src, color_marker):
     """Find the Surface block containing color_marker, then add } after it closes."""
     pos = src.find(color_marker)
     if pos == -1:
         print(f"  Box close ({color_marker}): marker not found")
         return src
-    # Find the ") {" that opens the Surface trailing lambda (search backward from marker)
-    # Actually, find forward from marker to the Column { ... } } pattern
-    # The Surface content is: { Column(...) { MarkdownBlock(...) } }
-    # We need to count from the "Surface(...) {" opening brace
-    # Find "Surface(" before the marker
     surface_start = src.rfind("Surface(", 0, pos)
-    # Find the "{ " that opens the trailing lambda after Surface's )
     brace_start = src.find("{", src.find(")", surface_start))
-    # Now count braces from brace_start to find where Surface block ends
     depth = 0
     i = brace_start
     while i < len(src):
@@ -147,13 +134,9 @@ def add_box_close_after_surface(src, color_marker):
         elif src[i] == '}':
             depth -= 1
             if depth == 0:
-                # This is where Surface block closes
-                # Find the end of this line
                 line_end = src.find('\n', i)
                 if line_end == -1:
                     line_end = len(src)
-                # Get indent of the Box (which is the Surface indent minus 4 spaces)
-                # Find the line containing Surface(
                 line_start = src.rfind('\n', 0, surface_start) + 1
                 surface_indent = ""
                 for ch in src[line_start:]:
@@ -161,10 +144,7 @@ def add_box_close_after_surface(src, color_marker):
                         surface_indent += ch
                     else:
                         break
-                # Box indent is same level as Surface was (Surface is now indented inside Box)
-                # Actually Box indent = Surface indent - 4 spaces
                 box_indent = surface_indent[4:] if len(surface_indent) >= 4 else ""
-                # Insert Box closing brace
                 src = src[:line_end + 1] + box_indent + "}\n" + src[line_end + 1:]
                 print(f"  Box close ({color_marker}): inserted after position {line_end}")
                 return src
@@ -182,10 +162,12 @@ print("[2] All bubble patches saved")
 # === 3. ChatList spacing ===
 with open(LIST_FILE, "r") as f:
     list_src = f.read()
+
 list_src = list_src.replace(
     "verticalArrangement = Arrangement.spacedBy(12.dp),",
     "verticalArrangement = Arrangement.spacedBy(4.dp),"
 )
+
 with open(LIST_FILE, "w") as f:
     f.write(list_src)
 print("[3] Spacing: OK")
