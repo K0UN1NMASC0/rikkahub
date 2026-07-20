@@ -102,7 +102,6 @@ print(f"[2c] AI bubble: {'OK' if n > 0 else 'NOT FOUND'} ({n} replacements)")
 
 # 2d. After each Surface block closes, insert wing Image, then close Box
 def insert_wing_after_surface(src, color_marker, drawable, wing_x, wing_y, alignment):
-    """Find Surface with color_marker, after its closing }, insert wing Image and Box close."""
     pos = src.find(color_marker)
     if pos == -1:
         print(f"  Wing ({color_marker}): marker not found")
