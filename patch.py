@@ -53,16 +53,14 @@ user_pattern = re.compile(
 def user_repl(m):
     indent = m.group(1)
     return (
-        f"{indent}Box(\n"
-        f"{indent}    modifier = Modifier.wrapContentSize()\n"
-        f"{indent}) {{\n"
+        f"{indent}Box {{\n"
         f"{indent}    Image(\n"
         f"{indent}        painter = painterResource(R.drawable.wing_right),\n"
         f"{indent}        contentDescription = null,\n"
         f"{indent}        modifier = Modifier\n"
         f"{indent}            .size(20.dp)\n"
         f"{indent}            .align(Alignment.TopEnd)\n"
-        f"{indent}            .offset(x = (-6).dp, y = (-4).dp)\n"
+        f"{indent}            .offset(x = 6.dp, y = (-6).dp)\n"
         f"{indent}            .zIndex(10f),\n"
         f"{indent}        contentScale = ContentScale.Fit\n"
         f"{indent}    )\n"
@@ -92,16 +90,14 @@ ai_pattern = re.compile(
 def ai_repl(m):
     indent = m.group(1)
     return (
-        f"{indent}Box(\n"
-        f"{indent}    modifier = Modifier.wrapContentSize()\n"
-        f"{indent}) {{\n"
+        f"{indent}Box {{\n"
         f"{indent}    Image(\n"
         f"{indent}        painter = painterResource(R.drawable.wing_left),\n"
         f"{indent}        contentDescription = null,\n"
         f"{indent}        modifier = Modifier\n"
         f"{indent}            .size(20.dp)\n"
         f"{indent}            .align(Alignment.TopStart)\n"
-        f"{indent}            .offset(x = (6).dp, y = (-4).dp)\n"
+        f"{indent}            .offset(x = (-6).dp, y = (-6).dp)\n"
         f"{indent}            .zIndex(10f),\n"
         f"{indent}        contentScale = ContentScale.Fit\n"
         f"{indent}    )\n"
