@@ -32,12 +32,11 @@ with open(MSG_FILE, "r") as f:
 
 # 2a. Add imports
 if "import androidx.compose.foundation.BorderStroke" not in src:
-    import_block = (
+        import_block = (
         "import androidx.compose.foundation.BorderStroke\n"
         "import androidx.compose.foundation.Image\n"
         "import androidx.compose.foundation.layout.offset\n"
         "import androidx.compose.foundation.layout.wrapContentSize\n"
-        "import androidx.compose.foundation.layout.matchParentSize\n"
         "import androidx.compose.ui.layout.ContentScale\n"
         "import androidx.compose.ui.zIndex\n"
     )
