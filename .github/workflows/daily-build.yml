@@ -13,8 +13,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4with:
-          fetch-depth: 0submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -61,7 +63,8 @@ jobs:
               cp app/src/main/res/mipmap-${dir}/ic_launcher.png app/src/main/res/mipmap-${dir}/ic_launcher_round.png
             done
             rm -f app/src/main/res/mipmap-*/ic_launcher.webp
-            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webprm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+            rm -f app/src/main/res/mipmap-*/ic_launcher_round.webp
+            rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
             rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           fi
 
