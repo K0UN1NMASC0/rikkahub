@@ -59,7 +59,7 @@ def user_repl(m):
         f"{indent}        modifier = Modifier\n"
         f"{indent}            .size(20.dp)\n"
         f"{indent}            .align(Alignment.TopEnd)\n"
-        f"{indent}            .offset(x = 6.dp, y = (-6).dp)\n"
+        f"{indent}         .offset(x = 4.dp, y = (-4).dp)\n"
         f"{indent}            .zIndex(10f),\n"
         f"{indent}        contentScale = ContentScale.Fit\n"
         f"{indent}    )\n"
