@@ -3,6 +3,7 @@ package me.rerere.rikkahub.data.service
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -19,7 +20,6 @@ import me.rerere.rikkahub.RouteActivity
 import me.rerere.rikkahub.data.datastore.SettingsStore
 import me.rerere.rikkahub.data.datastore.getCurrentAssistant
 import me.rerere.rikkahub.data.model.Conversation
-import me.rerere.rikkahub.data.model.MessageNode
 import me.rerere.rikkahub.data.model.toMessageNode
 import me.rerere.rikkahub.data.repository.ConversationRepository
 import me.rerere.rikkahub.utils.sendNotification
@@ -30,6 +30,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import org.koin.android.ext.android.inject
+import java.io.File
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
@@ -45,6 +46,7 @@ class ProactiveMessageTriggerService : Service() {
 
     companion object {
         private const val TAG = "ProactiveTrigger"
+        private const val CONFIG_FILE = "tulpa_proactive.json"
         private val httpClient = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -67,9 +69,9 @@ class ProactiveMessageTriggerService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Proactive message failed", e)
             } finally {
-                val prefs = getSharedPreferences(ProactiveMessageReceiver.PREFS_NAME, Context.MODE_PRIVATE)
-                val min = prefs.getInt(ProactiveMessageReceiver.KEY_MIN_INTERVAL, 60)
-                val max = prefs.getInt(ProactiveMessageReceiver.KEY_MAX_INTERVAL, 180)
+                val config = readConfig()
+                val min = config.optInt("minInterval", 180)
+                val max = config.optInt("maxInterval", 180)
                 ProactiveMessageReceiver.schedule(this@ProactiveMessageTriggerService, min, max)
                 stopSelf()
             }
@@ -77,20 +79,40 @@ class ProactiveMessageTriggerService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun readConfig(): JSONObject {
+        return try {
+            val file = File(Environment.getExternalStorageDirectory(), CONFIG_FILE)
+            if (file.exists()) {
+                JSONObject(file.readText())
+            } else {
+                // 也尝试 Documents 文件夹
+                val file2 = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), CONFIG_FILE)
+                if (file2.exists()) {
+                    JSONObject(file2.readText())
+                } else {
+                    Log.w(TAG, "Config file not found at ${file.absolutePath} or ${file2.absolutePath}")
+                    JSONObject()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read config", e)
+            JSONObject()
+        }
+    }
+
     private suspend fun trigger() {
+        val config = readConfig()
+        val baseUrl = config.optString("baseUrl", "").trimEnd('/')
+        val apiKey = config.optString("apiKey", "")
+        val modelId = config.optString("modelId", "")
+
+        if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) {
+            Log.w(TAG, "Config incomplete: baseUrl=$baseUrl, apiKey=${apiKey.take(5)}..., modelId=$modelId")
+            return
+        }
+
         val settings = settingsStore.settingsFlow.first()
         val assistant = settings.getCurrentAssistant()
-
-        // 找 provider
-        val provider = settings.providers.firstOrNull { 
-            it is me.rerere.ai.provider.ProviderSetting.OpenAI && it.apiKey.isNotBlank()
-        } as? me.rerere.ai.provider.ProviderSetting.OpenAI
-            ?: run { Log.w(TAG, "No provider found"); return }
-
-        val baseUrl = provider.baseUrl.trimEnd('/')
-        val apiKey = provider.apiKey
-        val modelId = (assistant.chatModelId ?: settings.chatModelId).toString()
-        if (modelId.isBlank()) { Log.w(TAG, "No model ID"); return }
 
         // 读最近对话
         val recentConvs = conversationRepository.getRecentConversations(assistant.id, limit = 1)
@@ -189,14 +211,12 @@ class ProactiveMessageTriggerService : Service() {
         val aiNode = aiMessage.toMessageNode()
 
         if (conversation != null) {
-            // 追加到已有对话
             val updatedConv = conversation.copy(
                 messageNodes = conversation.messageNodes + aiNode,
                 updateAt = Instant.now()
             )
             conversationRepository.updateConversation(updatedConv)
         } else {
-            // 新建对话
             val newConv = Conversation(
                 id = Uuid.random(),
                 assistantId = assistant.id,
