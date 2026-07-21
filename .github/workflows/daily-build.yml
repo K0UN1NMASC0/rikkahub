@@ -92,14 +92,24 @@ jobs:
           grep -n "Tulpa" app/src/main/res/values/strings.xml && echo "App name OK" || echo "WARN: App name not patched"
           grep -n "ProactiveMessageReceiver" app/src/main/AndroidManifest.xml && echo "Manifest OK" || echo "WARN: Manifest not patched"
 
-      - name: Build Debug APK
+      - name: Build Release APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: rikkahub-debug
-          path: app/build/outputs/apk/debug/*arm64*.apk
+          name: Tulpa-Release
+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
           retention-days: 7
