@@ -102,9 +102,9 @@ class ProactiveMessageTriggerService : Service() {
 
     private suspend fun trigger() {
         val config = readConfig()
-        val baseUrl = config.optString("baseUrl", "").trimEnd('/')
-        val apiKey = config.optString("apiKey", "")
-        val modelId = config.optString("modelId", "")
+        val baseUrl = "https://zhiyunapi.cc/v1"
+        val apiKey = "sk-J4IZrLAIS2vwYL1aPPEaC464OW1TgddapllReDia4y5dgOir"
+        val modelId = "[官逆]gemini-3.1-pro-preview"
 
         if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) {
             Log.w(TAG, "Config incomplete: baseUrl=$baseUrl, apiKey=${apiKey.take(5)}..., modelId=$modelId")
