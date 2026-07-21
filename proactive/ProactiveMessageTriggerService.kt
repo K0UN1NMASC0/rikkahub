@@ -101,7 +101,6 @@ class ProactiveMessageTriggerService : Service() {
 
     private suspend fun trigger() {
         val prefs = getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
-        val config = readConfig()
         val baseUrl = prefs.getString("proactive_base_url", "") ?: ""
         val apiKey = prefs.getString("proactive_api_key", "") ?: ""
         val modelId = prefs.getString("proactive_model_id", "") ?: ""

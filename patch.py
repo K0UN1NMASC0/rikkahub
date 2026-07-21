@@ -324,3 +324,44 @@ if "ProactiveSettingsActivity" not in manifest:
     print("[9] Manifest: registered ProactiveSettingsActivity")
 else:
     print("[9] ProactiveSettingsActivity: already registered")
+
+# === 10. Add Proactive Settings entry in SettingPage ===
+SETTING_PAGE = "app/src/main/java/me/rerere/rikkahub/ui/pages/setting/SettingPage.kt"
+with open(SETTING_PAGE, "r") as f:
+    sp = f.read()
+
+proactive_entry = '''                    item(
+                        onClick = {
+                            val intent = android.content.Intent(context, me.rerere.rikkahub.data.service.ProactiveSettingsActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        leadingContent = { Icon(HugeIcons.Megaphone01, null) },
+                        supportingContent = { Text("配置主动消息的API和间隔") },
+                        headlineContent = { Text("主动消息") },
+                    )'''
+
+# Insert after the SettingWeb item block
+marker = '''                    item(
+                        onClick = { navController.navigate(Screen.SettingWeb) },
+                        leadingContent = { Icon(HugeIcons.ServerStack01, null) },
+                        supportingContent = { Text(stringResource(R.string.setting_page_web_server_desc)) },
+                        headlineContent = { Text(stringResource(R.string.setting_page_web_server)) },
+                    )'''
+
+if "主动消息" not in sp:
+    if marker in sp:
+        sp = sp.replace(marker, marker + "\n" + proactive_entry)
+        # Also need to add context = LocalContext.current if not already there
+        if "val context = LocalContext.current" not in sp:
+            # Add it after navController declaration
+            sp = sp.replace(
+                "val navController = LocalNavController.current",
+                "val navController = LocalNavController.current\n    val context = LocalContext.current"
+            )
+        with open(SETTING_PAGE, "w") as f:
+            f.write(sp)
+        print("[10] SettingPage: added proactive settings entry")
+    else:
+        print("[10] WARNING: marker not found in SettingPage.kt")
+else:
+    print("[10] Proactive settings entry: already exists")
