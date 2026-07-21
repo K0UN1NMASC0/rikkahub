@@ -105,9 +105,30 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
+      - name: Get version info
+        id: version
+        run: |
+          VERSION=$(grep "versionName" app/build.gradle.kts | head -1 | grep -oP '"\K[^"]+')
+          CODE=$(grep "versionCode" app/build.gradle.kts | head -1 | grep -oP '\d+')
+          SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "version=${VERSION:-dev}" >> $GITHUB_OUTPUT
+          echo "code=${CODE:-0}" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION:-dev}-${SHA}" >> $GITHUB_OUTPUT
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Tulpa-Release
           path: app/build/outputs/apk/release/*arm64*.apk
           retention-days: 7
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Tulpa ${{ steps.version.outputs.version }} (${{ steps.version.outputs.sha }})"
+          body: "自动构建 - ${{ github.event.head_commit.message }}"
+          files: app/build/outputs/apk/release/*arm64*.apk
+          prerelease: false
+          make_latest: true

@@ -177,3 +177,50 @@ else:
     print("[6] Auto-start: already injected or trigger not found")
 
 print("\n=== All patches complete ===")
+
+# === 7. UpdateChecker URL -> GitHub Releases ===
+UPDATE_CHECKER_FILE = "app/src/main/java/me/rerere/rikkahub/utils/UpdateChecker.kt"
+with open(UPDATE_CHECKER_FILE, "r") as f:
+    uc_src = f.read()
+
+old_url = 'private const val API_URL = "https://updates.rikka-ai.com/"'
+new_url = 'private const val API_URL = "https://api.github.com/repos/K0UN1NMASC0/rikkahub/releases/latest"'
+
+if old_url in uc_src:
+    uc_src = uc_src.replace(old_url, new_url)
+
+    # Also need to transform the GitHub release JSON to match UpdateInfo format
+    # Replace the checkUpdate parsing logic
+    old_parse = """json.decodeFromString<UpdateInfo>(response.body.string())"""
+    new_parse = """run {
+                        val raw = org.json.JSONObject(response.body.string())
+                        val tagName = raw.optString("tag_name", "unknown")
+                        val body = raw.optString("body", "")
+                        val publishedAt = raw.optString("published_at", "")
+                        val assets = raw.optJSONArray("assets") ?: org.json.JSONArray()
+                        val downloads = mutableListOf<UpdateDownload>()
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            val name = asset.getString("name")
+                            if (name.endsWith(".apk")) {
+                                downloads.add(UpdateDownload(
+                                    name = name,
+                                    url = asset.getString("browser_download_url"),
+                                    size = "${asset.getLong("size") / 1024 / 1024}MB"
+                                ))
+                            }
+                        }
+                        UpdateInfo(
+                            version = tagName,
+                            publishedAt = publishedAt,
+                            changelog = body,
+                            downloads = downloads
+                        )
+                    }"""
+    uc_src = uc_src.replace(old_parse, new_parse)
+
+    with open(UPDATE_CHECKER_FILE, "w") as f:
+        f.write(uc_src)
+    print("[7] UpdateChecker: URL changed to GitHub Releases API")
+else:
+    print("[7] UpdateChecker: already patched or URL not found")
