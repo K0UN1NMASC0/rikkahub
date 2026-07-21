@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import me.rerere.rikkahub.RouteActivity
 import android.os.Build
 import android.util.Log
 import java.util.concurrent.TimeUnit
@@ -54,15 +55,16 @@ class ProactiveMessageReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pending)
-                } else {
-                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pending)
-                }
-            } else {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pending)
-            }
+            // Use setAlarmClock for maximum reliability on Chinese ROMs
+            val showIntent = PendingIntent.getActivity(
+                context, 0,
+                Intent(context, me.rerere.rikkahub.RouteActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(triggerTime, showIntent),
+                pending
+            )
 
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, true)

@@ -131,6 +131,17 @@ service_tag = '''        <service
             android:exported="false"
             android:foregroundServiceType="shortService" />'''
 
+
+# Add proactive message permissions
+perm_tags = """    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />"""
+
+if "SCHEDULE_EXACT_ALARM" not in manifest:
+    manifest = manifest.replace('<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+        perm_tags + '\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />')
+    print("[5a] Manifest: added alarm permissions")
+
 changed = False
 if "ProactiveMessageReceiver" not in manifest:
     manifest = manifest.replace("</application>", receiver_tag + "\n    </application>")
