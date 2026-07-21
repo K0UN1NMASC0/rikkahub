@@ -224,3 +224,81 @@ if old_url in uc_src:
     print("[7] UpdateChecker: URL changed to GitHub Releases API")
 else:
     print("[7] UpdateChecker: already patched or URL not found")
+
+# === 8. Battery & Location tools ===
+LOCAL_TOOLS_DIR = "app/src/main/java/me/rerere/rikkahub/data/ai/tools/local"
+
+# Copy tool files
+import shutil
+for tool_file in ["BatteryTool.kt", "LocationTool.kt"]:
+    src = f"proactive/{tool_file}"
+    dst = f"{LOCAL_TOOLS_DIR}/{tool_file}"
+    if os.path.exists(src):
+        shutil.copy2(src, dst)
+
+# Add to LocalToolOption.kt
+OPTION_FILE = f"{LOCAL_TOOLS_DIR}/LocalToolOption.kt"
+with open(OPTION_FILE, "r") as f:
+    opt_src = f.read()
+
+if "BatteryInfo" not in opt_src:
+    new_options = '''
+    @Serializable
+    @SerialName("battery_info")
+    data object BatteryInfo : LocalToolOption()
+
+    @Serializable
+    @SerialName("location")
+    data object Location : LocalToolOption()
+'''
+    # Insert before the closing brace
+    opt_src = opt_src.rstrip().rstrip("}")
+    opt_src += new_options + "}\n"
+    with open(OPTION_FILE, "w") as f:
+        f.write(opt_src)
+    print("[8a] LocalToolOption: added BatteryInfo + Location")
+
+# Add to LocalTools.kt
+LOCAL_TOOLS_FILE = f"{LOCAL_TOOLS_DIR}/LocalTools.kt"
+with open(LOCAL_TOOLS_FILE, "r") as f:
+    lt_src = f.read()
+
+if "batteryTool" not in lt_src:
+    # Add lazy val declarations
+    lt_src = lt_src.replace(
+        "val calendarCreateTool by lazy { buildCalendarCreateTool(context) }",
+        """val calendarCreateTool by lazy { buildCalendarCreateTool(context) }
+
+    val batteryTool by lazy { buildBatteryTool(context) }
+
+    val locationTool by lazy { buildLocationTool(context) }"""
+    )
+    # Add to getTools function
+    lt_src = lt_src.replace(
+        "if (options.contains(LocalToolOption.ScreenTime)) {",
+        """if (options.contains(LocalToolOption.BatteryInfo)) {
+            tools.add(batteryTool)
+        }
+        if (options.contains(LocalToolOption.Location)) {
+            tools.add(locationTool)
+        }
+        if (options.contains(LocalToolOption.ScreenTime)) {"""
+    )
+    with open(LOCAL_TOOLS_FILE, "w") as f:
+        f.write(lt_src)
+    print("[8b] LocalTools: added battery + location tools")
+
+# Add location permission to manifest
+with open(MANIFEST_FILE, "r") as f:
+    manifest = f.read()
+
+if "ACCESS_FINE_LOCATION" not in manifest:
+    manifest = manifest.replace(
+        '<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />',
+        '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />'
+    )
+    with open(MANIFEST_FILE, "w") as f:
+        f.write(manifest)
+    print("[8c] Manifest: added location permissions")
+
+print("[8] Battery & Location tools: done")
