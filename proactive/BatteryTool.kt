@@ -15,10 +15,9 @@ internal fun buildBatteryTool(context: Context): Tool = Tool(
     description = """
         Get the device's current battery level and charging status.
         Returns battery percentage (0-100), whether it's charging, and the charging source.
-    """.trimIndent(),
+    """.trimIndent().replace("\n", " "),
     parameters = {
-        InputSchema(
-            type = "object",
+        InputSchema.Obj(
             properties = buildJsonObject { },
             required = listOf()
         )

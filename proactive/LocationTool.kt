@@ -18,13 +18,10 @@ import java.util.Locale
 internal fun buildLocationTool(context: Context): Tool = Tool(
     name = "get_location",
     description = """
-        Get the device's current GPS location.
-        Returns latitude, longitude, and approximate address if available.
-        Requires location permission to be granted by the user.
-    """.trimIndent(),
+        Get the device's current GPS location. Returns latitude, longitude, and approximate address if available. Requires location permission.
+    """.trimIndent().replace("\n", " "),
     parameters = {
-        InputSchema(
-            type = "object",
+        InputSchema.Obj(
             properties = buildJsonObject { },
             required = listOf()
         )
@@ -42,11 +39,9 @@ internal fun buildLocationTool(context: Context): Tool = Tool(
         } else {
             val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-            // Try GPS first, then network
             val location: Location? = try {
                 locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(LocationManager.FUSED_PROVIDER)
             } catch (e: SecurityException) {
                 null
             }
@@ -57,25 +52,18 @@ internal fun buildLocationTool(context: Context): Tool = Tool(
                 val lat = location.latitude
                 val lon = location.longitude
                 val accuracy = location.accuracy
-                val time = location.time
 
-                // Try reverse geocoding
                 val address = try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        null // Skip on newer Android, async API is complex
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val geocoder = Geocoder(context, Locale.getDefault())
-                        val addresses = geocoder.getFromLocation(lat, lon, 1)
-                        addresses?.firstOrNull()?.let { addr ->
-                            buildString {
-                                addr.countryName?.let { append(it) }
-                                addr.adminArea?.let { append(" $it") }
-                                addr.locality?.let { append(" $it") }
-                                addr.subLocality?.let { append(" $it") }
-                                addr.thoroughfare?.let { append(" $it") }
-                            }.trim()
-                        }
+                    @Suppress("DEPRECATION")
+                    val geocoder = Geocoder(context, Locale.getDefault())
+                    val addresses = geocoder.getFromLocation(lat, lon, 1)
+                    addresses?.firstOrNull()?.let { addr ->
+                        buildString {
+                            addr.countryName?.let { append(it) }
+                            addr.adminArea?.let { append(" $it") }
+                            addr.locality?.let { append(" $it") }
+                            addr.subLocality?.let { append(" $it") }
+                        }.trim()
                     }
                 } catch (e: Exception) {
                     null
@@ -85,7 +73,6 @@ internal fun buildLocationTool(context: Context): Tool = Tool(
                     put("latitude", lat)
                     put("longitude", lon)
                     put("accuracy_meters", accuracy.toDouble())
-                    put("timestamp_ms", time)
                     address?.let { put("address", it) }
                 }
                 listOf(UIMessagePart.Text(result.toString()))
