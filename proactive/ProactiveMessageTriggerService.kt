@@ -69,10 +69,9 @@ class ProactiveMessageTriggerService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "Proactive message failed", e)
             } finally {
-                val config = readConfig()
-                val min = config.optInt("minInterval", 180)
-                val max = config.optInt("maxInterval", 180)
-                ProactiveMessageReceiver.schedule(this@ProactiveMessageTriggerService, min, max)
+                val intervalPrefs = getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
+                val interval = intervalPrefs.getInt("proactive_interval", 180)
+                ProactiveMessageReceiver.schedule(this@ProactiveMessageTriggerService, interval, interval)
                 stopSelf()
             }
         }
@@ -101,10 +100,11 @@ class ProactiveMessageTriggerService : Service() {
     }
 
     private suspend fun trigger() {
+        val prefs = getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
         val config = readConfig()
-        val baseUrl = "https://zhiyunapi.cc/v1"
-        val apiKey = "sk-J4IZrLAIS2vwYL1aPPEaC464OW1TgddapllReDia4y5dgOir"
-        val modelId = "[官逆]gemini-3.1-pro-preview"
+        val baseUrl = prefs.getString("proactive_base_url", "") ?: ""
+        val apiKey = prefs.getString("proactive_api_key", "") ?: ""
+        val modelId = prefs.getString("proactive_model_id", "") ?: ""
 
         if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) {
             Log.w(TAG, "Config incomplete: baseUrl=$baseUrl, apiKey=${apiKey.take(5)}..., modelId=$modelId")

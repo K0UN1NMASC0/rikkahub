@@ -302,3 +302,25 @@ if "ACCESS_FINE_LOCATION" not in manifest:
     print("[8c] Manifest: added location permissions")
 
 print("[8] Battery & Location tools: done")
+
+# === 9. Register ProactiveSettingsActivity in Manifest ===
+with open(MANIFEST_FILE, "r") as f:
+    manifest = f.read()
+
+activity_tag = '''        <activity
+            android:name=".data.service.ProactiveSettingsActivity"
+            android:exported="true"
+            android:label="主动消息设置">
+            <intent-filter>
+                <action android:name="me.rerere.rikkahub.PROACTIVE_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>'''
+
+if "ProactiveSettingsActivity" not in manifest:
+    manifest = manifest.replace("</application>", activity_tag + "\n    </application>")
+    with open(MANIFEST_FILE, "w") as f:
+        f.write(manifest)
+    print("[9] Manifest: registered ProactiveSettingsActivity")
+else:
+    print("[9] ProactiveSettingsActivity: already registered")
