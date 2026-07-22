@@ -365,3 +365,7 @@ if "主动消息" not in sp:
         print("[10] WARNING: marker not found in SettingPage.kt")
 else:
     print("[10] Proactive settings entry: already exists")
+
+# === 11. Copy ProactiveMessageWorker.kt to target ===
+# (handled in workflow cp command above, just ensure patch.py is aware)
+print("[11] ProactiveMessageWorker: handled in workflow cp step")

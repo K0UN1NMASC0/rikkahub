@@ -5,9 +5,10 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import me.rerere.rikkahub.RouteActivity
 import android.os.Build
 import android.util.Log
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
@@ -16,8 +17,11 @@ class ProactiveMessageReceiver : BroadcastReceiver() {
         Log.d(TAG, "ProactiveMessageReceiver triggered, action=${intent.action}")
         when (intent.action) {
             ACTION_PROACTIVE_MESSAGE -> {
-                val serviceIntent = Intent(context, ProactiveMessageTriggerService::class.java)
-                context.startForegroundService(serviceIntent)
+                // Android 12+ 不允许从 BroadcastReceiver 直接 startForegroundService
+                // 改用 WorkManager 绕过限制
+                val workRequest = OneTimeWorkRequestBuilder<ProactiveMessageWorker>().build()
+                WorkManager.getInstance(context).enqueue(workRequest)
+                Log.d(TAG, "Enqueued ProactiveMessageWorker via WorkManager")
             }
             Intent.ACTION_BOOT_COMPLETED -> {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -55,7 +59,6 @@ class ProactiveMessageReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Use setAlarmClock for maximum reliability on Chinese ROMs
             val showIntent = PendingIntent.getActivity(
                 context, 0,
                 Intent(context, me.rerere.rikkahub.RouteActivity::class.java),

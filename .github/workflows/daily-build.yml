@@ -73,7 +73,7 @@ jobs:
           TARGET="app/src/main/java/me/rerere/rikkahub/data/service"
           mkdir -p "$TARGET"
           if [ -d "proactive" ]; then
-            cp proactive/ProactiveMessageReceiver.kt proactive/ProactiveMessageTriggerService.kt proactive/ProactiveSettingsActivity.kt "$TARGET/" 2>/dev/null || true
+            cp proactive/ProactiveMessageReceiver.kt proactive/ProactiveMessageTriggerService.kt proactive/ProactiveSettingsActivity.kt proactive/ProactiveMessageWorker.kt "$TARGET/" 2>/dev/null || true
             echo "Proactive message files copied:"
             ls proactive/*.kt
           else
