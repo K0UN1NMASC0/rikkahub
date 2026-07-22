@@ -203,6 +203,7 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
             }
 
             item("modelServices") {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 CardGroup(
                     modifier = Modifier.padding(horizontal = 8.dp),
                     title = { Text(stringResource(R.string.setting_page_model_and_services)) },
@@ -242,6 +243,15 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
                         leadingContent = { Icon(HugeIcons.ServerStack01, null) },
                         supportingContent = { Text(stringResource(R.string.setting_page_web_server_desc)) },
                         headlineContent = { Text(stringResource(R.string.setting_page_web_server)) },
+                    )
+                    item(
+                        onClick = {
+                            val intent = android.content.Intent(context, me.rerere.rikkahub.data.service.ProactiveSettingsActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        leadingContent = { Icon(HugeIcons.Megaphone01, null) },
+                        supportingContent = { Text("配置主动消息的API和间隔") },
+                        headlineContent = { Text("主动消息") },
                     )
                 }
             }
