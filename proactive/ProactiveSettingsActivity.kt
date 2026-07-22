@@ -14,9 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Send
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -168,11 +165,9 @@ private fun ProactiveSettingsScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Timer,
-                            contentDescription = null,
-                            tint = TulpaPinkButton,
-                            modifier = Modifier.size(18.dp)
+                        Text(
+                            "⏱",
+                            fontSize = 16.sp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -342,11 +337,7 @@ private fun ProactiveSettingsScreen() {
                             ),
                             border = androidx.compose.foundation.BorderStroke(1.dp, TulpaPinkAccent)
                         ) {
-                            Icon(
-                                Icons.Outlined.Send,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            Text("💌", fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("立即测试一次", fontWeight = FontWeight.Medium)
                         }

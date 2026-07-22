@@ -177,8 +177,7 @@ fun ChatMessage(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
             ) {
-                val formatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                val timeStr = formatter.format(java.util.Date(node.updateAt.toEpochMilli()))
+                val timeStr = "%02d:%02d".format(message.createdAt.hour, message.createdAt.minute)
                 Text(
                     text = timeStr,
                     style = MaterialTheme.typography.labelSmall,
