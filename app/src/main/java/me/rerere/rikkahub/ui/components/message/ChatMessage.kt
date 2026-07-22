@@ -171,6 +171,21 @@ fun ChatMessage(
                 onUserMessageClick = if (message.role == MessageRole.USER) onEdit else null,
             )
 
+
+            /* TIMESTAMP INJECTED */
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
+            ) {
+                val formatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                val timeStr = formatter.format(java.util.Date(node.updateAt.toEpochMilli()))
+                Text(
+                    text = timeStr,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+
             message.translation?.let { translation ->
                 CollapsibleTranslationText(
                     content = translation,
