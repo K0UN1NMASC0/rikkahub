@@ -137,6 +137,9 @@ private fun ProactiveSettingsScreen() {
                             enabled = newVal
                             if (!newVal) {
                                 ProactiveMessageReceiver.cancel(context)
+                                // 同时取消所有已排队的 Worker，防止关了又自动触发
+                                WorkManager.getInstance(context).cancelUniqueWork("proactive_message")
+                                WorkManager.getInstance(context).cancelAllWorkByTag("proactive")
                                 Toast.makeText(context, "已停用", Toast.LENGTH_SHORT).show()
                             }
                         },

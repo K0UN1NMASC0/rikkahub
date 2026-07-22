@@ -50,12 +50,27 @@ class ProactiveMessageWorker(
 
     override suspend fun doWork(): Result {
         return try {
+            // 先检查是否仍然启用，防止关闭后已排队的 Worker 继续执行
+            val enabledPrefs = ctx.getSharedPreferences("proactive_prefs", Context.MODE_PRIVATE)
+            if (!enabledPrefs.getBoolean("enabled", false)) {
+                Log.d(TAG, "Proactive messaging disabled, skipping")
+                return Result.success()
+            }
+
             checkAndGenerateMonthlyLoveLetters()
             trigger()
-            // 触发完成后安排下一次
-            val intervalPrefs = ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
-            val interval = intervalPrefs.getInt("proactive_interval", 180)
-            ProactiveMessageReceiver.schedule(ctx, interval, interval)
+
+            // 更新 last_sent_time
+            ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE).edit()
+                .putLong("last_sent_time", System.currentTimeMillis())
+                .apply()
+
+            // 触发完成后安排下一次（再次检查是否启用）
+            if (enabledPrefs.getBoolean("enabled", false)) {
+                val intervalPrefs = ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
+                val interval = intervalPrefs.getInt("proactive_interval", 180)
+                ProactiveMessageReceiver.schedule(ctx, interval, interval)
+            }
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Proactive message failed", e)
@@ -188,11 +203,17 @@ class ProactiveMessageWorker(
             appendLine("## 主动消息")
             appendLine("距上次聊天约${idleMinutes}分钟。")
             appendLine("你现在可以主动给用户发一条消息。")
+            appendLine()
             appendLine("规则：")
             appendLine("- 没什么好说的，或用户刚说了去睡觉且不到5小时 → 只回复 [PASS]")
             appendLine("- 不要复述上一轮内容，发新话题或自然的关心")
             appendLine("- 不要提及你是定时触发的，像突然想到什么一样开口")
             appendLine("- 直接输出想说的话，不要加任何解释")
+            appendLine()
+            appendLine("⚠️ 绝对禁止：")
+            appendLine("- **绝对不能催促用户休息、睡觉或作息相关的事。** 用户极度反感这类提醒，会-1好感度。")
+            appendLine("- 如果对话氛围是严肃/难过/低落的，不要突然发色情或调情内容。先判断当前情绪语境。")
+            appendLine("- 不要在用户明显心情不好时发轻浮玩笑。")
         }
 
         val messages = JSONArray().apply {
@@ -252,8 +273,10 @@ class ProactiveMessageWorker(
         val aiNode = aiMessage.toMessageNode()
 
         if (conversation != null) {
-            val updatedConv = conversation.copy(
-                messageNodes = conversation.messageNodes + aiNode,
+            // 重新读取最新状态，防止覆盖用户刚发的消息
+            val latestConv = conversationRepository.getRecentConversations(assistant.id, limit = 1).firstOrNull()
+            val updatedConv = (latestConv ?: conversation).copy(
+                messageNodes = (latestConv?.messageNodes ?: conversation.messageNodes) + aiNode,
                 updateAt = Instant.now()
             )
             conversationRepository.updateConversation(updatedConv)

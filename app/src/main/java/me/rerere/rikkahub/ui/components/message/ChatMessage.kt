@@ -172,19 +172,6 @@ fun ChatMessage(
             )
 
 
-            /* TIMESTAMP INJECTED */
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
-            ) {
-                val timeStr = "%02d:%02d".format(message.createdAt.hour, message.createdAt.minute)
-                Text(
-                    text = timeStr,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
-
             message.translation?.let { translation ->
                 CollapsibleTranslationText(
                     content = translation,
