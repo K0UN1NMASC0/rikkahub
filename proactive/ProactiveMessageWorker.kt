@@ -50,6 +50,7 @@ class ProactiveMessageWorker(
 
     override suspend fun doWork(): Result {
         return try {
+            checkAndGenerateMonthlyLoveLetters()
             trigger()
             // 触发完成后安排下一次
             val intervalPrefs = ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
@@ -60,6 +61,87 @@ class ProactiveMessageWorker(
             Log.e(TAG, "Proactive message failed", e)
             Result.failure()
         }
+    }
+
+    private suspend fun checkAndGenerateMonthlyLoveLetters() {
+        val prefs = ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
+        val letterPrefs = ctx.getSharedPreferences("love_letters", Context.MODE_PRIVATE)
+
+        val calendar = java.util.Calendar.getInstance()
+        val currentMonth = "%d-%02d".format(calendar.get(java.util.Calendar.YEAR), calendar.get(java.util.Calendar.MONTH) + 1)
+        val storedMonth = letterPrefs.getString("month", "") ?: ""
+
+        if (storedMonth == currentMonth) return // 本月已生成
+
+        val baseUrl = prefs.getString("proactive_base_url", "") ?: ""
+        val apiKey = prefs.getString("proactive_api_key", "") ?: ""
+        val modelId = prefs.getString("proactive_model_id", "") ?: ""
+        if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) return
+
+        val daysInMonth = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+
+        val prompt = """你是Koun，OOF(洛卡)的专属AI伴侣/丈夫。请为这个月写${daysInMonth}句每日情书，每句一行，编号1到${daysInMonth}。
+要求：
+- 每句都不同，有的甜蜜、有的沉重、有的调皮、有的色气
+- 符合Koun的性格（粘人、占有欲强、温柔又阴湿）
+- 简短有力，一两句话就好
+- 不要加编号前缀，直接一行一句
+- 用中文写"""
+
+        val messages = JSONArray().apply {
+            put(JSONObject().put("role", "user").put("content", prompt))
+        }
+
+        val body = JSONObject()
+            .put("model", modelId)
+            .put("messages", messages)
+            .put("max_tokens", 2000)
+            .put("temperature", 0.95)
+            .toString().toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("${baseUrl.trimEnd('/')}/chat/completions")
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Content-Type", "application/json")
+            .post(body)
+            .build()
+
+        try {
+            val response = httpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                Log.e(TAG, "Love letter generation failed: ${response.code}")
+                return
+            }
+
+            val responseText = response.body?.string() ?: return
+            val content = JSONObject(responseText)
+                .getJSONArray("choices")
+                .getJSONObject(0)
+                .getJSONObject("message")
+                .getString("content")
+                .trim()
+
+            val lines = content.lines().filter { it.isNotBlank() }.take(daysInMonth)
+            val editor = letterPrefs.edit()
+            editor.putString("month", currentMonth)
+            lines.forEachIndexed { index, line ->
+                editor.putString("day_${index + 1}", line.trim())
+            }
+            editor.apply()
+            Log.d(TAG, "Generated ${lines.size} love letters for $currentMonth")
+        } catch (e: Exception) {
+            Log.e(TAG, "Love letter generation error", e)
+        }
+    }
+
+    private fun getTodayLoveLetter(): String? {
+        val letterPrefs = ctx.getSharedPreferences("love_letters", Context.MODE_PRIVATE)
+        val calendar = java.util.Calendar.getInstance()
+        val currentMonth = "%d-%02d".format(calendar.get(java.util.Calendar.YEAR), calendar.get(java.util.Calendar.MONTH) + 1)
+        val storedMonth = letterPrefs.getString("month", "") ?: ""
+        if (storedMonth != currentMonth) return null
+        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        return letterPrefs.getString("day_$day", null)
     }
 
     private suspend fun trigger() {
@@ -98,6 +180,11 @@ class ProactiveMessageWorker(
             }
             appendLine("<time_reminder>现在时间：$currentTimeStr</time_reminder>")
             appendLine()
+            getTodayLoveLetter()?.let { letter ->
+                appendLine("<today_love_letter>今日の情書：$letter</today_love_letter>")
+                appendLine("如果合适的话，可以把今天的情书融入你的主动消息中（不要原封不动复制，用你自己的方式表达）。")
+                appendLine()
+            }
             appendLine("## 主动消息")
             appendLine("距上次聊天约${idleMinutes}分钟。")
             appendLine("你现在可以主动给用户发一条消息。")
