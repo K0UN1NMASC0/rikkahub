@@ -50,8 +50,6 @@ import me.rerere.rikkahub.data.files.FileFolders
 import me.rerere.rikkahub.data.files.FileUtils
 import me.rerere.rikkahub.ui.components.nav.BackButton
 import me.rerere.rikkahub.ui.components.richtext.MarkdownBlock
-import me.rerere.rikkahub.Screen
-import me.rerere.rikkahub.ui.context.LocalNavController
 import me.rerere.rikkahub.ui.components.ui.CardGroup
 import me.rerere.rikkahub.ui.components.ui.Select
 import me.rerere.rikkahub.ui.context.LocalToaster
@@ -70,7 +68,6 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
     val scope = rememberCoroutineScope()
     val chatFontFamily = rememberChatFontFamily(displaySetting)
 
-    val navController = LocalNavController.current
     fun updateDisplaySetting(setting: DisplaySetting) {
         displaySetting = setting
         vm.updateSettings(settings.copy(displaySetting = setting))
@@ -362,104 +359,6 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
                                 )
                             }
                         }
-                    )
-                }
-            }
-
-            item {
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text("头像框设置") },
-                ) {
-                    item(
-                        headlineContent = { Text("用户头像框") },
-                        supportingContent = {
-                            Text(
-                                if (displaySetting.userAvatarFrame.enabled) "已启用 · 点击编辑"
-                                else "未设置 · 点击编辑"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.userAvatarFrame.enabled,
-                                onCheckedChange = {
-                                    updateDisplaySetting(
-                                        displaySetting.copy(
-                                            userAvatarFrame = displaySetting.userAvatarFrame.copy(enabled = it)
-                                        )
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { navController.navigate(Screen.AvatarFrameEditor(target = "user")) },
-                    )
-                    item(
-                        headlineContent = { Text("AI 头像框") },
-                        supportingContent = {
-                            Text(
-                                if (displaySetting.assistantAvatarFrame.enabled) "已启用 · 点击编辑"
-                                else "未设置 · 点击编辑"
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.assistantAvatarFrame.enabled,
-                                onCheckedChange = {
-                                    updateDisplaySetting(
-                                        displaySetting.copy(
-                                            assistantAvatarFrame = displaySetting.assistantAvatarFrame.copy(enabled = it)
-                                        )
-                                    )
-                                }
-                            )
-                        },
-                        onClick = { navController.navigate(Screen.AvatarFrameEditor(target = "assistant")) },
-                    )
-                }
-            }
-
-            item {
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text("气泡配色") },
-                ) {
-                    item(
-                        headlineContent = { Text("启用自定义气泡配色") },
-                        supportingContent = { Text("关闭则使用主题默认颜色") },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.bubbleColorConfig.enabled,
-                                onCheckedChange = {
-                                    updateDisplaySetting(
-                                        displaySetting.copy(
-                                            bubbleColorConfig = displaySetting.bubbleColorConfig.copy(enabled = it)
-                                        )
-                                    )
-                                }
-                            )
-                        },
-                    )
-                    item(
-                        headlineContent = { Text("配色预设") },
-                        supportingContent = {
-                            Select(
-                                options = me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS,
-                                selectedOption = me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS.find {
-                                    it.id == displaySetting.bubbleColorConfig.presetId
-                                } ?: me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS.first(),
-                                onOptionSelected = { preset ->
-                                    updateDisplaySetting(
-                                        displaySetting.copy(
-                                            bubbleColorConfig = me.rerere.rikkahub.data.model.BubbleColorConfig.fromPreset(preset)
-                                        )
-                                    )
-                                },
-                                modifier = Modifier
-                                    .padding(top = 4.dp)
-                                    .fillMaxWidth(),
-                                optionToString = { it.name },
-                            )
-                        },
                     )
                 }
             }

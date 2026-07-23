@@ -20,6 +20,7 @@ import me.rerere.hugeicons.stroke.Notification01
 import me.rerere.hugeicons.stroke.PaintBoard
 import me.rerere.hugeicons.stroke.Settings03
 import me.rerere.hugeicons.stroke.Sun01
+import me.rerere.hugeicons.stroke.Star
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.Screen
 import me.rerere.rikkahub.ui.components.nav.BackButton
@@ -81,6 +82,12 @@ fun SettingPreferencesPage() {
                         leadingContent = { Icon(HugeIcons.PaintBoard, null) },
                         headlineContent = { Text(stringResource(R.string.setting_page_preferences_ui)) },
                         supportingContent = { Text(stringResource(R.string.setting_page_preferences_ui_desc)) },
+                    )
+                    item(
+                        onClick = { navController.navigate(Screen.SettingPreferencesBeautify) },
+                        leadingContent = { Icon(HugeIcons.Star, null) },
+                        headlineContent = { Text("美化") },
+                        supportingContent = { Text("头像框、气泡配色") },
                     )
                 }
             }

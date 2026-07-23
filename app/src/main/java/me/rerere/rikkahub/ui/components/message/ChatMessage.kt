@@ -375,6 +375,16 @@ private fun MessagePartsBlock(
                         } else {
                             MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity)
                         }
+                        val userTextStyle = if (bubbleConfig.enabled) {
+                            LocalTextStyle.current.copy(color = Color(bubbleConfig.userTextColor.toInt()))
+                        } else {
+                            LocalTextStyle.current
+                        }
+                        val aiTextStyle = if (bubbleConfig.enabled) {
+                            LocalTextStyle.current.copy(color = Color(bubbleConfig.aiTextColor.toInt()))
+                        } else {
+                            LocalTextStyle.current
+                        }
                         val textContent = @Composable {
                             if (role == MessageRole.USER) {
                                 Surface(
@@ -390,6 +400,7 @@ private fun MessagePartsBlock(
                                                 scope = AssistantAffectScope.USER,
                                                 visual = true,
                                             ),
+                                            style = userTextStyle,
                                             onClickCitation = handleClickCitation
                                         )
                                     }
@@ -408,6 +419,7 @@ private fun MessagePartsBlock(
                                                     scope = AssistantAffectScope.ASSISTANT,
                                                     visual = true,
                                                 ),
+                                                style = aiTextStyle,
                                                 onClickCitation = handleClickCitation,
                                             )
                                         }

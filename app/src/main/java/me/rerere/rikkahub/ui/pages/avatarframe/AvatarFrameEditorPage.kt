@@ -72,6 +72,7 @@ fun AvatarFrameEditorPage(
         onSave = { saveFrame(it) },
         onBack = { navController.popBackStack() },
         title = if (target == "user") "用户头像框" else "AI 头像框",
+        target = target,
     )
 }
 
@@ -81,6 +82,7 @@ private fun AvatarFrameEditorContent(
     onSave: (AvatarFrame) -> Unit,
     onBack: () -> Unit,
     title: String = "头像框编辑器",
+    target: String = "user",
 ) {
     var stickerUri by remember { mutableStateOf(currentFrame.stickerUrl) }
     var offsetX by remember { mutableFloatStateOf(currentFrame.offsetX) }
@@ -89,12 +91,26 @@ private fun AvatarFrameEditorContent(
     var rotation by remember { mutableFloatStateOf(currentFrame.rotation) }
     var enabled by remember { mutableStateOf(currentFrame.enabled) }
 
+    val context = LocalContext.current
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            stickerUri = it.toString()
-            enabled = true
+            // 复制图片到内部存储以持久化
+            val targetDir = java.io.File(context.filesDir, "avatar_frames").apply { mkdirs() }
+            val targetFile = java.io.File(targetDir, "frame_${target}_${System.currentTimeMillis()}.png")
+            try {
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                stickerUri = targetFile.absolutePath
+                enabled = true
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
