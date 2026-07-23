@@ -18,7 +18,9 @@ import me.rerere.ai.ui.isEmptyUIMessage
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.model.Assistant
 import me.rerere.rikkahub.data.model.Avatar
+import me.rerere.rikkahub.data.model.AvatarFrame
 import me.rerere.rikkahub.ui.components.ui.AutoAIIcon
+import me.rerere.rikkahub.ui.components.ui.AvatarWithFrame
 import me.rerere.rikkahub.ui.components.ui.UIAvatar
 import me.rerere.rikkahub.ui.context.LocalSettings
 
@@ -41,10 +43,12 @@ fun ChatMessageUserAvatar(
                 style = MaterialTheme.typography.labelLargeEmphasized,
                 maxLines = 1,
             )
-            UIAvatar(
+            AvatarWithFrame(
                 name = nickname,
                 modifier = Modifier.size(28.dp),
                 value = avatar,
+                frame = settings.displaySetting.userAvatarFrame,
+                avatarSize = 28.dp,
                 loading = false,
             )
         }
@@ -70,10 +74,12 @@ fun ChatMessageAssistantAvatar(
         ) {
             if (useAssistantAvatar) {
                 if (showIcon) {
-                    UIAvatar(
+                    AvatarWithFrame(
                         name = assistant.name,
                         modifier = Modifier.size(28.dp),
                         value = assistant.avatar,
+                        frame = settings.displaySetting.assistantAvatarFrame,
+                        avatarSize = 28.dp,
                         loading = loading,
                     )
                 }

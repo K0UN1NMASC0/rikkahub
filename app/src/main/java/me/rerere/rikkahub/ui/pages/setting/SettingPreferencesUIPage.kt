@@ -366,6 +366,56 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
             item {
                 CardGroup(
                     modifier = Modifier.padding(horizontal = 8.dp),
+                    title = { Text("头像框设置") },
+                ) {
+                    item(
+                        headlineContent = { Text("用户头像框") },
+                        supportingContent = {
+                            Text(
+                                if (displaySetting.userAvatarFrame.enabled) "已启用"
+                                else "未设置"
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = displaySetting.userAvatarFrame.enabled,
+                                onCheckedChange = {
+                                    updateDisplaySetting(
+                                        displaySetting.copy(
+                                            userAvatarFrame = displaySetting.userAvatarFrame.copy(enabled = it)
+                                        )
+                                    )
+                                }
+                            )
+                        },
+                    )
+                    item(
+                        headlineContent = { Text("AI 头像框") },
+                        supportingContent = {
+                            Text(
+                                if (displaySetting.assistantAvatarFrame.enabled) "已启用"
+                                else "未设置"
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = displaySetting.assistantAvatarFrame.enabled,
+                                onCheckedChange = {
+                                    updateDisplaySetting(
+                                        displaySetting.copy(
+                                            assistantAvatarFrame = displaySetting.assistantAvatarFrame.copy(enabled = it)
+                                        )
+                                    )
+                                }
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                CardGroup(
+                    modifier = Modifier.padding(horizontal = 8.dp),
                     title = { Text(stringResource(R.string.setting_page_code_display_settings)) },
                 ) {
                     item(
