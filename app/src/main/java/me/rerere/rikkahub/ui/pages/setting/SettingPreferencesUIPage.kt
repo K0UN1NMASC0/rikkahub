@@ -416,6 +416,52 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
             item {
                 CardGroup(
                     modifier = Modifier.padding(horizontal = 8.dp),
+                    title = { Text("气泡配色") },
+                ) {
+                    item(
+                        headlineContent = { Text("启用自定义气泡配色") },
+                        supportingContent = { Text("关闭则使用主题默认颜色") },
+                        trailingContent = {
+                            Switch(
+                                checked = displaySetting.bubbleColorConfig.enabled,
+                                onCheckedChange = {
+                                    updateDisplaySetting(
+                                        displaySetting.copy(
+                                            bubbleColorConfig = displaySetting.bubbleColorConfig.copy(enabled = it)
+                                        )
+                                    )
+                                }
+                            )
+                        },
+                    )
+                    item(
+                        headlineContent = { Text("配色预设") },
+                        supportingContent = {
+                            Select(
+                                options = me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS,
+                                selectedOption = me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS.find {
+                                    it.id == displaySetting.bubbleColorConfig.presetId
+                                } ?: me.rerere.rikkahub.data.model.BubbleColorConfig.PRESETS.first(),
+                                onOptionSelected = { preset ->
+                                    updateDisplaySetting(
+                                        displaySetting.copy(
+                                            bubbleColorConfig = me.rerere.rikkahub.data.model.BubbleColorConfig.fromPreset(preset)
+                                        )
+                                    )
+                                },
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth(),
+                                optionToString = { it.name },
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                CardGroup(
+                    modifier = Modifier.padding(horizontal = 8.dp),
                     title = { Text(stringResource(R.string.setting_page_code_display_settings)) },
                 ) {
                     item(
