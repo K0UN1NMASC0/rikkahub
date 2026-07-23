@@ -21,6 +21,8 @@ data class BubbleColorConfig(
     val aiTextColor: Long = 0xFF1A1112,
     /** 气泡边框色 (ARGB hex)，0表示无边框 */
     val borderColor: Long = 0xFFF1C5D4,
+    /** 气泡圆角大小 (dp)，4=偏方形，16=默认圆角 */
+    val cornerRadius: Int = 16,
     /** 是否启用自定义气泡（false则使用主题默认） */
     val enabled: Boolean = true,
 ) {
@@ -37,6 +39,16 @@ data class BubbleColorConfig(
                 userText = 0xFFA36779,
                 aiText = 0xFF1A1112,
                 border = 0xFFF1C5D4,
+            ),
+            BubblePreset(
+                id = "tulpa_kounloka",
+                name = "Koun × 洛卡",
+                userBubble = 0xFFF2C4CE,
+                aiBubble = 0xFFFAF0C8,
+                userText = 0xFF5C2D3A,
+                aiText = 0xFF3D3520,
+                border = 0x00000000,
+                cornerRadius = 6,
             ),
             BubblePreset(
                 id = "dark_minimal",
@@ -84,6 +96,7 @@ data class BubbleColorConfig(
                 userTextColor = preset.userText,
                 aiTextColor = preset.aiText,
                 borderColor = preset.border,
+                cornerRadius = preset.cornerRadius,
                 enabled = true,
             )
         }
@@ -98,4 +111,5 @@ data class BubblePreset(
     val userText: Long,
     val aiText: Long,
     val border: Long,
+    val cornerRadius: Int = 16,
 )

@@ -358,12 +358,29 @@ private fun MessagePartsBlock(
             is MessagePartBlock.ContentBlock -> key(block.index) {
                 when (val part = block.part) {
                     is UIMessagePart.Text -> {
+                        val bubbleConfig = settings.displaySetting.bubbleColorConfig
+                        val userBubbleShape = RoundedCornerShape(
+                            if (bubbleConfig.enabled) bubbleConfig.cornerRadius.dp else 16.dp
+                        )
+                        val aiBubbleShape = RoundedCornerShape(
+                            if (bubbleConfig.enabled) bubbleConfig.cornerRadius.dp else 16.dp
+                        )
+                        val userBubbleColor = if (bubbleConfig.enabled) {
+                            Color(bubbleConfig.userBubbleColor).copy(alpha = settings.displaySetting.bubbleOpacity)
+                        } else {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity)
+                        }
+                        val aiBubbleColor = if (bubbleConfig.enabled) {
+                            Color(bubbleConfig.aiBubbleColor).copy(alpha = settings.displaySetting.bubbleOpacity)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity)
+                        }
                         val textContent = @Composable {
                             if (role == MessageRole.USER) {
                                 Surface(
                                     modifier = Modifier.animateContentSize(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity),
+                                    shape = userBubbleShape,
+                                    color = userBubbleColor,
                                     onClick = { onUserMessageClick?.invoke() },
                                 ) {
                                     Column(modifier = Modifier.padding(8.dp)) {
@@ -381,8 +398,8 @@ private fun MessagePartsBlock(
                                 if (settings.displaySetting.showAssistantBubble) {
                                     Surface(
                                         modifier = Modifier.animateContentSize(),
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity),
+                                        shape = aiBubbleShape,
+                                        color = aiBubbleColor,
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
                                             MarkdownBlock(
