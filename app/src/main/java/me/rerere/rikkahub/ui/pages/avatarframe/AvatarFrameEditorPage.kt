@@ -93,6 +93,8 @@ private fun AvatarFrameEditorContent(
 
     val context = LocalContext.current
 
+    var showSaveSuccess by remember { mutableStateOf(false) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -155,6 +157,7 @@ private fun AvatarFrameEditorContent(
                                 enabled = enabled
                             )
                         )
+                        showSaveSuccess = true
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -168,6 +171,18 @@ private fun AvatarFrameEditorContent(
             }
         }
     ) { padding ->
+        if (showSaveSuccess) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showSaveSuccess = false; onBack() },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { showSaveSuccess = false; onBack() }) {
+                        Text("好")
+                    }
+                },
+                title = { Text("保存成功") },
+                text = { Text("头像框已更新 ✓") },
+            )
+        }
         Column(
             modifier = Modifier
                 .padding(padding)
