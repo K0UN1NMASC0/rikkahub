@@ -181,6 +181,12 @@ class ProactiveMessageWorker(
             ((System.currentTimeMillis() - lastUpdateAt.toEpochMilli()) / 60000L).toInt()
         } else 9999
 
+        // 如果最近10分钟内有对话，说明正在聊天中，跳过主动消息
+        if (idleMinutes < 10) {
+            Log.d(TAG, "User is actively chatting (idle=${idleMinutes}min), skipping")
+            return
+        }
+
         val currentTimeStr = SimpleDateFormat("yyyy年MM月dd日 HH:mm EEEE", Locale.CHINESE).format(Date())
 
         val historyMessages: List<UIMessage> = conversation?.messageNodes
