@@ -50,6 +50,8 @@ import me.rerere.rikkahub.data.files.FileFolders
 import me.rerere.rikkahub.data.files.FileUtils
 import me.rerere.rikkahub.ui.components.nav.BackButton
 import me.rerere.rikkahub.ui.components.richtext.MarkdownBlock
+import me.rerere.rikkahub.Screen
+import me.rerere.rikkahub.ui.context.LocalNavController
 import me.rerere.rikkahub.ui.components.ui.CardGroup
 import me.rerere.rikkahub.ui.components.ui.Select
 import me.rerere.rikkahub.ui.context.LocalToaster
@@ -68,6 +70,7 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
     val scope = rememberCoroutineScope()
     val chatFontFamily = rememberChatFontFamily(displaySetting)
 
+    val navController = LocalNavController.current
     fun updateDisplaySetting(setting: DisplaySetting) {
         displaySetting = setting
         vm.updateSettings(settings.copy(displaySetting = setting))
@@ -372,8 +375,8 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
                         headlineContent = { Text("用户头像框") },
                         supportingContent = {
                             Text(
-                                if (displaySetting.userAvatarFrame.enabled) "已启用"
-                                else "未设置"
+                                if (displaySetting.userAvatarFrame.enabled) "已启用 · 点击编辑"
+                                else "未设置 · 点击编辑"
                             )
                         },
                         trailingContent = {
@@ -388,13 +391,14 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
                                 }
                             )
                         },
+                        onClick = { navController.navigate(Screen.AvatarFrameEditor(target = "user")) },
                     )
                     item(
                         headlineContent = { Text("AI 头像框") },
                         supportingContent = {
                             Text(
-                                if (displaySetting.assistantAvatarFrame.enabled) "已启用"
-                                else "未设置"
+                                if (displaySetting.assistantAvatarFrame.enabled) "已启用 · 点击编辑"
+                                else "未设置 · 点击编辑"
                             )
                         },
                         trailingContent = {
@@ -409,6 +413,7 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
                                 }
                             )
                         },
+                        onClick = { navController.navigate(Screen.AvatarFrameEditor(target = "assistant")) },
                     )
                 }
             }

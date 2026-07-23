@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import me.rerere.rikkahub.data.model.AvatarFrame
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 // Tulpa pink theme colors (consistent with ProactiveSettings)
 private val TulpaPink = Color(0xFFFCE5EB)
@@ -48,10 +49,38 @@ private val TulpaWhite = Color(0xFFFFFFFF)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AvatarFrameEditorPage(
-    currentAvatarUrl: String?,
+    target: String = "user",
+    vm: me.rerere.rikkahub.ui.pages.setting.SettingVM = org.koin.androidx.compose.koinViewModel(),
+) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val displaySetting = settings.displaySetting
+    val navController = me.rerere.rikkahub.ui.context.LocalNavController.current
+
+    val currentFrame = if (target == "user") displaySetting.userAvatarFrame else displaySetting.assistantAvatarFrame
+
+    fun saveFrame(frame: AvatarFrame) {
+        val newDisplay = if (target == "user") {
+            displaySetting.copy(userAvatarFrame = frame)
+        } else {
+            displaySetting.copy(assistantAvatarFrame = frame)
+        }
+        vm.updateSettings(settings.copy(displaySetting = newDisplay))
+    }
+
+    AvatarFrameEditorContent(
+        currentFrame = currentFrame,
+        onSave = { saveFrame(it) },
+        onBack = { navController.popBackStack() },
+        title = if (target == "user") "用户头像框" else "AI 头像框",
+    )
+}
+
+@Composable
+private fun AvatarFrameEditorContent(
     currentFrame: AvatarFrame,
     onSave: (AvatarFrame) -> Unit,
     onBack: () -> Unit,
+    title: String = "头像框编辑器",
 ) {
     var stickerUri by remember { mutableStateOf(currentFrame.stickerUrl) }
     var offsetX by remember { mutableFloatStateOf(currentFrame.offsetX) }

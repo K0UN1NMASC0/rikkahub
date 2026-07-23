@@ -124,6 +124,7 @@ import me.rerere.rikkahub.ui.pages.setting.SettingSearchPage
 import me.rerere.rikkahub.ui.pages.setting.SettingSpeechPage
 import me.rerere.rikkahub.ui.pages.setting.SettingWebPage
 import me.rerere.rikkahub.ui.pages.share.handler.ShareHandlerPage
+import me.rerere.rikkahub.ui.pages.avatarframe.AvatarFrameEditorPage
 import me.rerere.rikkahub.ui.pages.stats.StatsPage
 import me.rerere.rikkahub.ui.pages.translator.TranslatorPage
 import me.rerere.rikkahub.ui.pages.webview.WebViewPage
@@ -529,6 +530,10 @@ class RouteActivity : ComponentActivity() {
                             entry<Screen.Stats> {
                                 StatsPage()
                             }
+
+                            entry<Screen.AvatarFrameEditor> { key ->
+                                AvatarFrameEditorPage(target = key.target)
+                            }
                         }
                     )
                     if (BuildConfig.DEBUG) {
@@ -728,4 +733,7 @@ sealed interface Screen : NavKey {
 
     @Serializable
     data object Stats : Screen
+
+    @Serializable
+    data class AvatarFrameEditor(val target: String = "user") : Screen
 }

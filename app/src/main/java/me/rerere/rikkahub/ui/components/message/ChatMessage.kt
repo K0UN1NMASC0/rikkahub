@@ -366,12 +366,12 @@ private fun MessagePartsBlock(
                             if (bubbleConfig.enabled) bubbleConfig.cornerRadius.dp else 16.dp
                         )
                         val userBubbleColor = if (bubbleConfig.enabled) {
-                            Color(bubbleConfig.userBubbleColor).copy(alpha = settings.displaySetting.bubbleOpacity)
+                            Color(bubbleConfig.userBubbleColor.toInt()).copy(alpha = settings.displaySetting.bubbleOpacity)
                         } else {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = settings.displaySetting.bubbleOpacity)
                         }
                         val aiBubbleColor = if (bubbleConfig.enabled) {
-                            Color(bubbleConfig.aiBubbleColor).copy(alpha = settings.displaySetting.bubbleOpacity)
+                            Color(bubbleConfig.aiBubbleColor.toInt()).copy(alpha = settings.displaySetting.bubbleOpacity)
                         } else {
                             MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = settings.displaySetting.bubbleOpacity)
                         }
