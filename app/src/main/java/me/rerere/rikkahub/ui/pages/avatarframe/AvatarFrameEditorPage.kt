@@ -183,26 +183,15 @@ private fun AvatarFrameEditorContent(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    // 底层：头像预览
-                    if (currentAvatarUrl != null) {
-                        AsyncImage(
-                            model = currentAvatarUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
-                                .background(TulpaPinkAccent),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("头像", color = TulpaPinkDark, fontSize = 14.sp)
-                        }
+                    // 底层：头像预览（使用占位圆形）
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE0E0E0)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("预览", color = Color(0xFF757575), fontSize = 14.sp)
                     }
 
                     // 上层：贴纸叠加
