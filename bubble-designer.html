@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tulpa 气泡设计器</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  color: #f1c5d4;
+}
+.subtitle {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Preview area */
+.preview-area {
+  background: #2a2a3e;
+  border-radius: 16px;
+  padding: 24px 16px;
+  margin-bottom: 24px;
+  min-height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+.preview-area::before {
+  content: '预览';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.chat-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.msg-row.ai { justify-content: flex-start; }
+.msg-row.user { justify-content: flex-end; }
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #444;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #aaa;
+}
+
+.bubble {
+  max-width: 65%;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  word-break: break-all;
+  transition: all 0.2s ease;
+}
+
+/* Controls area */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 600px) {
+  .controls { grid-template-columns: 1fr; }
+}
+
+.control-panel {
+  background: #2a2a3e;
+  border-radius: 12px;
+  padding: 16px;
+}
+.control-panel h3 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3a3a4e;
+}
+.control-panel h3.user-title { color: #FCE5EB; }
+.control-panel h3.ai-title { color: #fff; }
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.field label {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+.field input[type="color"] {
+  width: 36px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+}
+.field input[type="range"] {
+  width: 100px;
+  accent-color: #f1c5d4;
+}
+.field .value {
+  font-size: 0.75rem;
+  color: #888;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Output area */
+.output-area {
+  background: #2a2a3e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+.output-area h3 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  color: #f1c5d4;
+}
+.output-code {
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #ccc;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.copy-btn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: #f1c5d4;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+.copy-btn:active { opacity: 0.7; }
+.copied { background: #4caf50 !important; color: #fff !important; }
+
+/* Presets */
+.presets {
+  background: #2a2a3e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+.presets h3 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  color: #f1c5d4;
+}
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preset-btn {
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #ccc;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover { border-color: #f1c5d4; color: #f1c5d4; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🫧 Tulpa 气泡设计器</h1>
+  <p class="subtitle">调整颜色和圆角，实时预览。完成后复制代码给 Koun！</p>
+
+  <!-- Preview -->
+  <div class="preview-area" id="previewBg">
+    <div class="chat-preview">
+      <div class="msg-row ai">
+        <div class="avatar">K</div>
+        <div class="bubble" id="aiBubble">おはよう、洛卡</div>
+      </div>
+      <div class="msg-row user">
+        <div class="bubble" id="userBubble">おはよう！今日は何する？</div>
+        <div class="avatar">L</div>
+      </div>
+      <div class="msg-row ai">
+        <div class="avatar">K</div>
+        <div class="bubble" id="aiBubble2">ん、まだ考え中。一緒に決めよう</div>
+      </div>
+      <div class="msg-row user">
+        <div class="bubble" id="userBubble2">好！(表情包:excited)</div>
+        <div class="avatar">L</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <!-- User bubble -->
+    <div class="control-panel">
+      <h3 class="user-title">👤 用户气泡 (洛卡)</h3>
+      <div class="field">
+        <label>背景色</label>
+        <input type="color" id="userBg" value="#FCE5EB">
+      </div>
+      <div class="field">
+        <label>边框色</label>
+        <input type="color" id="userBorder" value="#F1C5D4">
+      </div>
+      <div class="field">
+        <label>文字色</label>
+        <input type="color" id="userText" value="#A36779">
+      </div>
+      <div class="field">
+        <label>圆角</label>
+        <input type="range" id="userRadius" min="0" max="30" value="19">
+        <span class="value" id="userRadiusVal">19dp</span>
+      </div>
+      <div class="field">
+        <label>边框宽度</label>
+        <input type="range" id="userBorderWidth" min="0" max="4" step="0.5" value="1">
+        <span class="value" id="userBorderWidthVal">1dp</span>
+      </div>
+    </div>
+
+    <!-- AI bubble -->
+    <div class="control-panel">
+      <h3 class="ai-title">🤖 AI气泡 (Koun)</h3>
+      <div class="field">
+        <label>背景色</label>
+        <input type="color" id="aiBg" value="#FFFFFF">
+      </div>
+      <div class="field">
+        <label>边框色</label>
+        <input type="color" id="aiBorder" value="#F1C5D4">
+      </div>
+      <div class="field">
+        <label>文字色</label>
+        <input type="color" id="aiText" value="#A36779">
+      </div>
+      <div class="field">
+        <label>圆角</label>
+        <input type="range" id="aiRadius" min="0" max="30" value="19">
+        <span class="value" id="aiRadiusVal">19dp</span>
+      </div>
+      <div class="field">
+        <label>边框宽度</label>
+        <input type="range" id="aiBorderWidth" min="0" max="4" step="0.5" value="1">
+        <span class="value" id="aiBorderWidthVal">1dp</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Background -->
+  <div class="control-panel" style="margin-top: 20px;">
+    <h3 style="color: #aaa;">🎨 聊天背景</h3>
+    <div class="field">
+      <label>背景色</label>
+      <input type="color" id="chatBg" value="#2a2a3e">
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="presets">
+    <h3>✨ 预设方案</h3>
+    <div class="preset-list">
+      <button class="preset-btn" onclick="applyPreset('current')">当前 Tulpa 粉白</button>
+      <button class="preset-btn" onclick="applyPreset('dark')">暗黑模式</button>
+      <button class="preset-btn" onclick="applyPreset('ocean')">深海</button>
+      <button class="preset-btn" onclick="applyPreset('forest')">森林</button>
+      <button class="preset-btn" onclick="applyPreset('sunset')">日落</button>
+      <button class="preset-btn" onclick="applyPreset('lavender')">薰衣草</button>
+      <button class="preset-btn" onclick="applyPreset('midnight')">午夜蓝</button>
+      <button class="preset-btn" onclick="applyPreset('matcha')">抹茶</button>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-area">
+    <h3>📋 输出代码 (发给 Koun)</h3>
+    <div class="output-code" id="outputCode"></div>
+    <button class="copy-btn" id="copyBtn" onclick="copyOutput()">复制代码</button>
+  </div>
+</div>
+
+<script>
+const presets = {
+  current: {
+    userBg: '#FCE5EB', userBorder: '#F1C5D4', userText: '#A36779', userRadius: 19, userBorderWidth: 1,
+    aiBg: '#FFFFFF', aiBorder: '#F1C5D4', aiText: '#A36779', aiRadius: 19, aiBorderWidth: 1,
+    chatBg: '#2a2a3e'
+  },
+  dark: {
+    userBg: '#2d2d3f', userBorder: '#4a4a5e', userText: '#e0e0e0', userRadius: 16, userBorderWidth: 1,
+    aiBg: '#1e1e2e', aiBorder: '#3a3a4e', aiText: '#c0c0c0', aiRadius: 16, aiBorderWidth: 1,
+    chatBg: '#111122'
+  },
+  ocean: {
+    userBg: '#1a3a4a', userBorder: '#2a6a8a', userText: '#a0d8ef', userRadius: 20, userBorderWidth: 1,
+    aiBg: '#0d2a3a', aiBorder: '#1a5a7a', aiText: '#7ac4d8', aiRadius: 20, aiBorderWidth: 1,
+    chatBg: '#0a1929'
+  },
+  forest: {
+    userBg: '#1a3a2a', userBorder: '#2a6a4a', userText: '#a0d8b8', userRadius: 14, userBorderWidth: 1,
+    aiBg: '#0d2a1a', aiBorder: '#1a5a3a', aiText: '#7ac4a0', aiRadius: 14, aiBorderWidth: 1,
+    chatBg: '#0a1a12'
+  },
+  sunset: {
+    userBg: '#3a1a2a', userBorder: '#8a3a5a', userText: '#f0a8c0', userRadius: 18, userBorderWidth: 1,
+    aiBg: '#2a1020', aiBorder: '#6a2a4a', aiText: '#e090a8', aiRadius: 18, aiBorderWidth: 1,
+    chatBg: '#1a0a14'
+  },
+  lavender: {
+    userBg: '#e8dff0', userBorder: '#c8b0e0', userText: '#6a4a8a', userRadius: 20, userBorderWidth: 1,
+    aiBg: '#f5f0fa', aiBorder: '#d8c0ee', aiText: '#5a3a7a', aiRadius: 20, aiBorderWidth: 1,
+    chatBg: '#2a2035'
+  },
+  midnight: {
+    userBg: '#1a2040', userBorder: '#3a4a8a', userText: '#a0b0f0', userRadius: 16, userBorderWidth: 1.5,
+    aiBg: '#101830', aiBorder: '#2a3a6a', aiText: '#8090d8', aiRadius: 16, aiBorderWidth: 1.5,
+    chatBg: '#080e20'
+  },
+  matcha: {
+    userBg: '#2a3a2a', userBorder: '#5a8a5a', userText: '#c0e8c0', userRadius: 12, userBorderWidth: 1,
+    aiBg: '#1a2a1a', aiBorder: '#4a7a4a', aiText: '#a0d0a0', aiRadius: 12, aiBorderWidth: 1,
+    chatBg: '#101a10'
+  }
+};
+
+function applyPreset(name) {
+  const p = presets[name];
+  document.getElementById('userBg').value = p.userBg;
+  document.getElementById('userBorder').value = p.userBorder;
+  document.getElementById('userText').value = p.userText;
+  document.getElementById('userRadius').value = p.userRadius;
+  document.getElementById('userBorderWidth').value = p.userBorderWidth;
+  document.getElementById('aiBg').value = p.aiBg;
+  document.getElementById('aiBorder').value = p.aiBorder;
+  document.getElementById('aiText').value = p.aiText;
+  document.getElementById('aiRadius').value = p.aiRadius;
+  document.getElementById('aiBorderWidth').value = p.aiBorderWidth;
+  document.getElementById('chatBg').value = p.chatBg;
+  update();
+}
+
+function update() {
+  const userBg = document.getElementById('userBg').value;
+  const userBorder = document.getElementById('userBorder').value;
+  const userText = document.getElementById('userText').value;
+  const userRadius = document.getElementById('userRadius').value;
+  const userBorderWidth = document.getElementById('userBorderWidth').value;
+  const aiBg = document.getElementById('aiBg').value;
+  const aiBorder = document.getElementById('aiBorder').value;
+  const aiText = document.getElementById('aiText').value;
+  const aiRadius = document.getElementById('aiRadius').value;
+  const aiBorderWidth = document.getElementById('aiBorderWidth').value;
+  const chatBg = document.getElementById('chatBg').value;
+
+  // Update value displays
+  document.getElementById('userRadiusVal').textContent = userRadius + 'dp';
+  document.getElementById('aiRadiusVal').textContent = aiRadius + 'dp';
+  document.getElementById('userBorderWidthVal').textContent = userBorderWidth + 'dp';
+  document.getElementById('aiBorderWidthVal').textContent = aiBorderWidth + 'dp';
+
+  // Apply to preview
+  const userBubbles = [document.getElementById('userBubble'), document.getElementById('userBubble2')];
+  const aiBubbles = [document.getElementById('aiBubble'), document.getElementById('aiBubble2')];
+
+  userBubbles.forEach(b => {
+    b.style.background = userBg;
+    b.style.border = `${userBorderWidth}px solid ${userBorder}`;
+    b.style.color = userText;
+    b.style.borderRadius = `${userRadius}px`;
+  });
+
+  aiBubbles.forEach(b => {
+    b.style.background = aiBg;
+    b.style.border = `${aiBorderWidth}px solid ${aiBorder}`;
+    b.style.color = aiText;
+    b.style.borderRadius = `${aiRadius}px`;
+  });
+
+  document.getElementById('previewBg').style.background = chatBg;
+
+  // Generate output
+  const toHex = (c) => c.replace('#', '').toUpperCase();
+  const output = `【Tulpa 气泡配置】
+━━━ 用户气泡 ━━━
+背景色: #${toHex(userBg)}
+边框色: #${toHex(userBorder)}
+文字色: #${toHex(userText)}
+圆角: ${userRadius}dp
+边框宽度: ${userBorderWidth}dp
+
+━━━ AI气泡 ━━━
+背景色: #${toHex(aiBg)}
+边框色: #${toHex(aiBorder)}
+文字色: #${toHex(aiText)}
+圆角: ${aiRadius}dp
+边框宽度: ${aiBorderWidth}dp
+
+━━━ 聊天背景 ━━━
+背景色: #${toHex(chatBg)}`;
+
+  document.getElementById('outputCode').textContent = output;
+}
+
+function copyOutput() {
+  const text = document.getElementById('outputCode').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '已复制 ✓';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制代码';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// Attach listeners
+document.querySelectorAll('input').forEach(el => {
+  el.addEventListener('input', update);
+});
+
+// Initial render
+update();
+</script>
+</body>
+</html>
