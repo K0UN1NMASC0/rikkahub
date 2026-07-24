@@ -65,23 +65,12 @@ object XhsLinkProcessor {
             // 保留原始文本
             enrichedParts.addAll(parts)
 
-            // 添加结构化笔记信息
+            // 添加结构化笔记信息（包含图片URL供AI参考，但不嵌入图片本体）
             val noteText = buildNoteText(noteData)
             enrichedParts.add(UIMessagePart.Text(noteText))
 
-            // 下载图片并转base64（最多5张）
-            val imageUrls = noteData.images.take(5)
-            if (imageUrls.isNotEmpty()) {
-                val imageResults = imageUrls.map { imageUrl ->
-                    async(Dispatchers.IO) {
-                        downloadImageAsBase64(imageUrl)
-                    }
-                }.awaitAll()
-
-                imageResults.filterNotNull().forEach { base64Data ->
-                    enrichedParts.add(UIMessagePart.Image(url = base64Data))
-                }
-            }
+            // 注意：不再下载图片为base64，因为ConversationRepository不允许保存base64部分
+            // 图片URL已包含在noteText中，AI可以通过URL理解内容
 
             enrichedParts
         } catch (e: Exception) {
@@ -240,6 +229,12 @@ object XhsLinkProcessor {
             if (note.desc.isNotBlank()) appendLine("正文: ${note.desc}")
             appendLine("互动: ❤️${note.likedCount} 💬${note.commentCount} ⭐${note.collectedCount}")
             appendLine("图片数量: ${note.images.size}张")
+            if (note.images.isNotEmpty()) {
+                appendLine("图片链接:")
+                note.images.take(5).forEachIndexed { index, url ->
+                    appendLine("  ${index + 1}. $url")
+                }
+            }
             if (note.comments.isNotEmpty()) {
                 appendLine("评论区:")
                 note.comments.forEach { appendLine("  · $it") }
