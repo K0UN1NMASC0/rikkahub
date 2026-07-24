@@ -40,4 +40,8 @@ sealed class LocalToolOption {
     @Serializable
     @SerialName("location")
     data object Location : LocalToolOption()
+
+    @Serializable
+    @SerialName("weather")
+    data object Weather : LocalToolOption()
 }

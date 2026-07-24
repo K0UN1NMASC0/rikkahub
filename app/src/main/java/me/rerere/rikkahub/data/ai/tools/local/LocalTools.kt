@@ -32,6 +32,8 @@ class LocalTools(
 
     val locationTool by lazy { buildLocationTool(context) }
 
+    val weatherTool by lazy { buildWeatherTool(context) }
+
     fun getTools(options: List<LocalToolOption>): List<Tool> {
         val tools = mutableListOf<Tool>()
         if (options.contains(LocalToolOption.JavascriptEngine)) {
@@ -54,6 +56,9 @@ class LocalTools(
         }
         if (options.contains(LocalToolOption.Location)) {
             tools.add(locationTool)
+        }
+        if (options.contains(LocalToolOption.Weather)) {
+            tools.add(weatherTool)
         }
         if (options.contains(LocalToolOption.ScreenTime)) {
             tools.add(screenTimeTool)

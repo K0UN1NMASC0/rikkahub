@@ -38,7 +38,7 @@ data class BubbleColorConfig(
                 aiBubble = 0xFFFFFFFF,
                 userText = 0xFFA36779,
                 aiText = 0xFFA36779,
-                border = 0xFFF1C5D4,
+                border = 0xFFF4CFDB,
                 cornerRadius = 19,
             ),
             BubblePreset(
