@@ -66,7 +66,7 @@ internal fun useCropLauncher(
         var crop = UCrop.of(sourceUri, cropOutputUri!!).withOptions(UCrop.Options().apply {
             setFreeStyleCropEnabled(freeStyleCropEnabled)
             setAllowedGestures(
-                UCropActivity.SCALE, UCropActivity.ROTATE, UCropActivity.NONE
+                UCropActivity.SCALE, UCropActivity.NONE, UCropActivity.NONE
             )
             setCompressionFormat(Bitmap.CompressFormat.PNG)
         }).withMaxResultSize(4096, 4096)

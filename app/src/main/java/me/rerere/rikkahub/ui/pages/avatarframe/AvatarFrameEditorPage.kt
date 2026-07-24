@@ -204,12 +204,12 @@ private fun AvatarFrameEditorContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
-                            detectTransformGestures { _, pan, zoom, rotationChange ->
+                            detectTransformGestures { _, pan, zoom, _ ->
                                 // 将像素偏移转换为 -1~1 的比例
                                 offsetX = (offsetX + pan.x / size.width * 2).coerceIn(-1f, 1f)
                                 offsetY = (offsetY + pan.y / size.height * 2).coerceIn(-1f, 1f)
                                 scale = (scale * zoom).coerceIn(0.3f, 3.0f)
-                                rotation = (rotation + rotationChange) % 360f
+                                // rotation is intentionally disabled to prevent accidental rotation
                             }
                         },
                     contentAlignment = Alignment.Center

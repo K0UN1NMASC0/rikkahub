@@ -31,7 +31,9 @@ fun AvatarWithFrame(
     onClick: (() -> Unit)? = null,
 ) {
     // 贴纸需要更大的容器来容纳溢出部分
-    val containerSize = avatarSize * 1.8f
+    // Scale container dynamically based on frame scale to prevent clipping
+    val effectiveScale = if (frame.enabled) frame.scale.coerceAtLeast(1.0f) else 1.0f
+    val containerSize = avatarSize * (1.0f + effectiveScale * 0.8f)
 
     Box(
         modifier = modifier.size(containerSize),
