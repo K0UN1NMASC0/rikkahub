@@ -314,7 +314,10 @@ class ChatService(
                 val settings = settingsStore.settingsFlow.first()
                 val assistant = settings.getAssistantById(currentConversation.assistantId)
                     ?: settings.getCurrentAssistant()
-                val processedContent = preprocessUserInputParts(content, assistant)
+                var processedContent = preprocessUserInputParts(content, assistant)
+
+                // 小红书链接自动解析：抓取笔记数据+图片base64注入
+                processedContent = me.rerere.rikkahub.data.xhs.XhsLinkProcessor.processMessageParts(processedContent)
 
                 // 添加消息到列表
                 val newConversation = currentConversation.copy(
