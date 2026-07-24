@@ -18,11 +18,11 @@ data class BubbleColorConfig(
     /** 自定义时的用户气泡文字色 (ARGB hex) */
     val userTextColor: Long = 0xFFA36779,
     /** 自定义时的AI气泡文字色 (ARGB hex) */
-    val aiTextColor: Long = 0xFF1A1112,
+    val aiTextColor: Long = 0xFFA36779,
     /** 气泡边框色 (ARGB hex)，0表示无边框 */
-    val borderColor: Long = 0xFFF1C5D4,
+    val borderColor: Long = 0xFFF4CFDB,
     /** 气泡圆角大小 (dp)，4=偏方形，16=默认圆角 */
-    val cornerRadius: Int = 16,
+    val cornerRadius: Int = 19,
     /** 是否启用自定义气泡（false则使用主题默认） */
     val enabled: Boolean = true,
 ) {

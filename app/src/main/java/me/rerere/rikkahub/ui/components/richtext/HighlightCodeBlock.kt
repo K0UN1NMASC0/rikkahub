@@ -181,7 +181,8 @@ fun HighlightCodeBlock(
                     )
                 }
                 else -> {
-                    val textStyle = LocalTextStyle.current.merge(style)
+                    val codeTextColor = MaterialTheme.colorScheme.onSurface
+                    val textStyle = LocalTextStyle.current.merge(style).copy(color = codeTextColor)
                     val codeLines = remember(code) { code.lines() }
                     val collapsedCode = remember(codeLines) { codeLines.take(COLLAPSE_LINES).joinToString("\n") }
                     val displayCode = if (isExpanded) code else collapsedCode
