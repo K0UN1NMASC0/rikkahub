@@ -7,7 +7,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -27,13 +26,8 @@ private const val TAG = "XhsLinkProcessor"
 object XhsLinkProcessor {
 
     private val XHS_URL_PATTERN = Regex(
-        """(https?://)?(www\.)?(xiaohongshu\.com/discovery/item/|xiaohongshu\.com/explore/|xhslink\.com/)[^\s]+""",
+        """(https?://)?(www\.)?(xiaohongshu\.com/discovery/item/|xiaohongshu\.com/explore/|xhslink\.com/|xhslink\.cn/)[^\s]+""",
         RegexOption.IGNORE_CASE
-    )
-
-    private val INITIAL_STATE_PATTERN = Regex(
-        """window\.__INITIAL_STATE__\s*=\s*(\{.+?\})\s*</script>""",
-        RegexOption.DOT_MATCHES_ALL
     )
 
     private val httpClient = OkHttpClient.Builder()
@@ -122,17 +116,24 @@ object XhsLinkProcessor {
      * 从HTML中解析 __INITIAL_STATE__
      */
     private fun parseInitialState(html: String): XhsNoteData? {
-        val match = INITIAL_STATE_PATTERN.find(html) ?: return null
-        val jsonStr = match.groupValues[1]
+        // 直接定位 window.__INITIAL_STATE__= 后的JSON
+        val marker = "window.__INITIAL_STATE__="
+        val startIdx = html.indexOf(marker)
+        if (startIdx == -1) return null
+
+        val jsonStartIdx = startIdx + marker.length
+        val scriptEndIdx = html.indexOf("</script>", jsonStartIdx)
+        if (scriptEndIdx == -1) return null
+
+        val jsonStr = html.substring(jsonStartIdx, scriptEndIdx)
+            .trim()
+            .trimEnd(';')
             .replace("\\u002F", "/")
             .replace("undefined", "null")
 
         return try {
             val jsonObj = json.parseToJsonElement(jsonStr).jsonObject
-
-            // 尝试两种路径
-            val noteData = tryGetNoteData(jsonObj) ?: return null
-            noteData
+            tryGetNoteData(jsonObj)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse __INITIAL_STATE__", e)
             null
@@ -141,42 +142,59 @@ object XhsLinkProcessor {
 
     private fun tryGetNoteData(state: JsonObject): XhsNoteData? {
         try {
-            // 路径1: note.noteDetailMap.{noteId}.note
-            val noteSection = state["note"]?.jsonObject ?: return null
-            val noteDetailMap = noteSection["noteDetailMap"]?.jsonObject ?: return null
-            val firstEntry = noteDetailMap.entries.firstOrNull() ?: return null
-            val noteObj = firstEntry.value.jsonObject["note"]?.jsonObject ?: return null
+            // 路径1: noteData.data.noteData (新版移动端页面)
+            val noteDataSection = state["noteData"]?.jsonObject
+            val noteObj = noteDataSection
+                ?.get("data")?.jsonObject
+                ?.get("noteData")?.jsonObject
 
-            val title = noteObj["title"]?.jsonPrimitive?.content ?: ""
-            val desc = noteObj["desc"]?.jsonPrimitive?.content ?: ""
-            val user = noteObj["user"]?.jsonObject
-            val nickname = user?.get("nickname")?.jsonPrimitive?.content ?: ""
+            // 路径2: note.noteDetailMap.{noteId}.note (旧版)
+            val fallbackNoteObj = if (noteObj == null) {
+                val noteSection = state["note"]?.jsonObject
+                val noteDetailMap = noteSection?.get("noteDetailMap")?.jsonObject
+                val firstEntry = noteDetailMap?.entries?.firstOrNull()
+                firstEntry?.value?.jsonObject?.get("note")?.jsonObject
+            } else null
+
+            val finalNoteObj = noteObj ?: fallbackNoteObj ?: return null
+
+            val title = finalNoteObj["title"]?.jsonPrimitive?.content ?: ""
+            val desc = finalNoteObj["desc"]?.jsonPrimitive?.content ?: ""
+            val user = finalNoteObj["user"]?.jsonObject
+            val nickname = user?.get("nickname")?.jsonPrimitive?.content
+                ?: user?.get("nick_name")?.jsonPrimitive?.content
+                ?: ""
 
             // 图片列表
-            val imageList = noteObj["imageList"]?.jsonArray
+            val imageList = finalNoteObj["imageList"]?.jsonArray
             val images = imageList?.mapNotNull { imgElement ->
                 val imgObj = imgElement.jsonObject
-                // 尝试 urlDefault > url 
                 val imgUrl = imgObj["urlDefault"]?.jsonPrimitive?.content
                     ?: imgObj["url"]?.jsonPrimitive?.content
                     ?: return@mapNotNull null
+                if (imgUrl.isBlank()) return@mapNotNull null
                 normalizeImageUrl(imgUrl)
             } ?: emptyList()
 
             // 互动数据
-            val interactInfo = noteObj["interactInfo"]?.jsonObject
+            val interactInfo = finalNoteObj["interactInfo"]?.jsonObject
             val likedCount = interactInfo?.get("likedCount")?.jsonPrimitive?.content ?: "0"
             val commentCount = interactInfo?.get("commentCount")?.jsonPrimitive?.content ?: "0"
             val collectedCount = interactInfo?.get("collectedCount")?.jsonPrimitive?.content ?: "0"
 
-            // 评论（首屏）
+            // 评论（首屏）- 尝试多种路径
             val comments = mutableListOf<String>()
             try {
-                val commentSection = state["comment"]?.jsonObject
-                val commentsData = commentSection?.get("comments")?.jsonArray
-                commentsData?.take(5)?.forEach { commentElement ->
+                val commentData = noteDataSection
+                    ?.get("data")?.jsonObject
+                    ?.get("commentData")?.jsonObject
+                    ?.get("comments")?.jsonArray
+                    ?: state["comment"]?.jsonObject?.get("comments")?.jsonArray
+
+                commentData?.take(5)?.forEach { commentElement ->
                     val commentObj = commentElement.jsonObject
-                    val commentUser = commentObj["userInfo"]?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""
+                    val commentUser = commentObj["userInfo"]?.jsonObject
+                        ?.get("nickname")?.jsonPrimitive?.content ?: ""
                     val commentContent = commentObj["content"]?.jsonPrimitive?.content ?: ""
                     if (commentContent.isNotBlank()) {
                         comments.add("$commentUser: $commentContent")
