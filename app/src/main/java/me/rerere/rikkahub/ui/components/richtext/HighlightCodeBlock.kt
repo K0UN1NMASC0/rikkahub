@@ -83,7 +83,6 @@ import me.rerere.rikkahub.ui.theme.JetbrainsMono
 import me.rerere.rikkahub.ui.theme.LocalDarkMode
 import me.rerere.rikkahub.utils.toDp
 import kotlin.time.Clock
-import androidx.compose.ui.graphics.Color
 
 private const val COLLAPSE_LINES = 10
 private val PREVIEWABLE_LANGUAGES = setOf("html", "svg")
@@ -137,14 +136,14 @@ fun HighlightCodeBlock(
 
     Column(
         modifier = modifier
-            .border(1.dp, Color(0xFF3A3A4E), MaterialTheme.shapes.large)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.large)
             .clip(MaterialTheme.shapes.large)
-            .background(Color(0xFF1E1E2E)),
+            .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF2A2A3E))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             HighlightCodeActions(
@@ -182,7 +181,7 @@ fun HighlightCodeBlock(
                     )
                 }
                 else -> {
-                    val textStyle = LocalTextStyle.current.merge(style).copy(color = Color(0xFFABB2BF))
+                    val textStyle = LocalTextStyle.current.merge(style)
                     val codeLines = remember(code) { code.lines() }
                     val collapsedCode = remember(codeLines) { codeLines.take(COLLAPSE_LINES).joinToString("\n") }
                     val displayCode = if (isExpanded) code else collapsedCode
@@ -274,7 +273,7 @@ private fun CodeBlockWithLineNumbersWrapped(
                         fontSize = textStyle.fontSize,
                         lineHeight = textStyle.lineHeight,
                         fontFamily = JetbrainsMono,
-                        color = Color(0xFFABB2BF).copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         softWrap = false,
                         modifier = Modifier.padding(end = 8.dp)
                     )
@@ -329,7 +328,7 @@ private fun CodeBlockDefault(
                         fontSize = textStyle.fontSize,
                         lineHeight = textStyle.lineHeight,
                         fontFamily = JetbrainsMono,
-                        color = Color(0xFFABB2BF).copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         softWrap = false,
                     )
                 }
@@ -376,7 +375,8 @@ private fun HighlightCodeActions(
             fontSize = 12.sp,
             lineHeight = 12.sp,
             fontFamily = JetbrainsMono,
-            color = Color(0xFFABB2BF).copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+                .copy(alpha = 0.5f),
         )
         Spacer(Modifier.weight(1f))
         Row(
@@ -384,7 +384,7 @@ private fun HighlightCodeActions(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val iconSize = 16.dp
-            val iconTint = Color(0xFFABB2BF).copy(alpha = 0.7f)
+            val iconTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
             Icon(
                 imageVector = HugeIcons.Download04,

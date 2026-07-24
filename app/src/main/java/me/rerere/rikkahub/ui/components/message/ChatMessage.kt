@@ -387,7 +387,7 @@ private fun MessagePartsBlock(
                             LocalTextStyle.current
                         }
                         val bubbleBorder = if (bubbleConfig.enabled && bubbleConfig.borderColor != 0L) {
-                            BorderStroke(1.5.dp, Color(bubbleConfig.borderColor.toInt()))
+                            BorderStroke(1.dp, Color(bubbleConfig.borderColor.toInt()))
                         } else {
                             null
                         }
