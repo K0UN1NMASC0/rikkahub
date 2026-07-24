@@ -96,6 +96,7 @@ import me.rerere.rikkahub.utils.openUrl
 import me.rerere.rikkahub.utils.urlDecode
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun ChatMessage(

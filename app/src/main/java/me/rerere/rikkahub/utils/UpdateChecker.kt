@@ -17,7 +17,7 @@ import me.rerere.rikkahub.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-private const val API_URL = "https://updates.rikka-ai.com/"
+private const val API_URL = "https://api.github.com/repos/K0UN1NMASC0/rikkahub/releases/latest"
 
 class UpdateChecker(private val client: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -38,7 +38,31 @@ class UpdateChecker(private val client: OkHttpClient) {
                             .build()
                     ).await()
                     if (response.isSuccessful) {
-                        json.decodeFromString<UpdateInfo>(response.body.string())
+                        run {
+                        val raw = org.json.JSONObject(response.body.string())
+                        val tagName = raw.optString("tag_name", "unknown")
+                        val body = raw.optString("body", "")
+                        val publishedAt = raw.optString("published_at", "")
+                        val assets = raw.optJSONArray("assets") ?: org.json.JSONArray()
+                        val downloads = mutableListOf<UpdateDownload>()
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            val name = asset.getString("name")
+                            if (name.endsWith(".apk")) {
+                                downloads.add(UpdateDownload(
+                                    name = name,
+                                    url = asset.getString("browser_download_url"),
+                                    size = "${asset.getLong("size") / 1024 / 1024}MB"
+                                ))
+                            }
+                        }
+                        UpdateInfo(
+                            version = tagName,
+                            publishedAt = publishedAt,
+                            changelog = body,
+                            downloads = downloads
+                        )
+                    }
                     } else {
                         throw Exception("Failed to fetch update info")
                     }

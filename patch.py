@@ -369,3 +369,48 @@ else:
 # === 11. Copy ProactiveMessageWorker.kt to target ===
 # (handled in workflow cp command above, just ensure patch.py is aware)
 print("[11] ProactiveMessageWorker: handled in workflow cp step")
+
+# === 12. Fix code block readability ===
+CODE_BLOCK_FILE = "app/src/main/java/me/rerere/rikkahub/ui/components/richtext/HighlightCodeBlock.kt"
+with open(CODE_BLOCK_FILE, "r") as f:
+    cb_src = f.read()
+
+# Add Color import if missing
+if "import androidx.compose.ui.graphics.Color" not in cb_src:
+    last_import = cb_src.rfind("\nimport ")
+    next_nl = cb_src.find("\n", last_import + 1)
+    cb_src = cb_src[:next_nl + 1] + "import androidx.compose.ui.graphics.Color\n" + cb_src[next_nl + 1:]
+    print("[12a] Added Color import to HighlightCodeBlock.kt")
+
+# Replace surfaceContainer background with a fixed dark color for readability
+cb_src = cb_src.replace(
+    ".background(MaterialTheme.colorScheme.surfaceContainer)",
+    ".background(Color(0xFF1E1E2E))"
+)
+# Replace header background
+cb_src = cb_src.replace(
+    ".background(MaterialTheme.colorScheme.surfaceContainerHighest)",
+    ".background(Color(0xFF2A2A3E))"
+)
+# Replace border color
+cb_src = cb_src.replace(
+    ".border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.large)",
+    ".border(1.dp, Color(0xFF3A3A4E), MaterialTheme.shapes.large)"
+)
+# Replace onSurfaceVariant for language label and line numbers to be lighter
+cb_src = cb_src.replace(
+    "color = MaterialTheme.colorScheme.onSurfaceVariant\n                .copy(alpha = 0.5f)",
+    "color = Color(0xFFABB2BF).copy(alpha = 0.7f)"
+)
+cb_src = cb_src.replace(
+    "color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)",
+    "color = Color(0xFFABB2BF).copy(alpha = 0.5f)"
+)
+cb_src = cb_src.replace(
+    "val iconTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)",
+    "val iconTint = Color(0xFFABB2BF).copy(alpha = 0.7f)"
+)
+
+with open(CODE_BLOCK_FILE, "w") as f:
+    f.write(cb_src)
+print("[12] Code block readability fix: OK")

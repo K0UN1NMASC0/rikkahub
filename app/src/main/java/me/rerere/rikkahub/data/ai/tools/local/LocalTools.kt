@@ -28,6 +28,10 @@ class LocalTools(
 
     val calendarCreateTool by lazy { buildCalendarCreateTool(context) }
 
+    val batteryTool by lazy { buildBatteryTool(context) }
+
+    val locationTool by lazy { buildLocationTool(context) }
+
     fun getTools(options: List<LocalToolOption>): List<Tool> {
         val tools = mutableListOf<Tool>()
         if (options.contains(LocalToolOption.JavascriptEngine)) {
@@ -44,6 +48,12 @@ class LocalTools(
         }
         if (options.contains(LocalToolOption.AskUser)) {
             tools.add(askUserTool)
+        }
+        if (options.contains(LocalToolOption.BatteryInfo)) {
+            tools.add(batteryTool)
+        }
+        if (options.contains(LocalToolOption.Location)) {
+            tools.add(locationTool)
         }
         if (options.contains(LocalToolOption.ScreenTime)) {
             tools.add(screenTimeTool)

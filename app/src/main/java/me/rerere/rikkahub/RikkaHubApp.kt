@@ -57,6 +57,8 @@ class RikkaHubApp : Application() {
             modules(appModule, viewModelModule, dataSourceModule, repositoryModule)
         }
         this.createNotificationChannel()
+me.rerere.rikkahub.data.service.ProactiveMessageReceiver.schedule(this, 180, 180)
+
 
         // set cursor window size to 32MB
         DatabaseUtil.setCursorWindowSize(32 * 1024 * 1024)
