@@ -36,9 +36,10 @@ data class BubbleColorConfig(
                 name = "Tulpa Pink",
                 userBubble = 0xFFFCE5EB,
                 aiBubble = 0xFFFFFFFF,
-                userText = 0xFF5C2D3A,
-                aiText = 0xFF1A1112,
+                userText = 0xFFA36779,
+                aiText = 0xFFA36779,
                 border = 0xFFF1C5D4,
+                cornerRadius = 19,
             ),
             BubblePreset(
                 id = "tulpa_kounloka",

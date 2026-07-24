@@ -386,12 +386,18 @@ private fun MessagePartsBlock(
                         } else {
                             LocalTextStyle.current
                         }
+                        val bubbleBorder = if (bubbleConfig.enabled && bubbleConfig.borderColor != 0L) {
+                            BorderStroke(1.5.dp, Color(bubbleConfig.borderColor.toInt()))
+                        } else {
+                            null
+                        }
                         val textContent = @Composable {
                             if (role == MessageRole.USER) {
                                 Surface(
                                     modifier = Modifier.animateContentSize(),
                                     shape = userBubbleShape,
                                     color = userBubbleColor,
+                                    border = bubbleBorder,
                                     onClick = { onUserMessageClick?.invoke() },
                                 ) {
                                     Column(modifier = Modifier.padding(8.dp)) {
@@ -412,6 +418,7 @@ private fun MessagePartsBlock(
                                         modifier = Modifier.animateContentSize(),
                                         shape = aiBubbleShape,
                                         color = aiBubbleColor,
+                                        border = bubbleBorder,
                                     ) {
                                         Column(modifier = Modifier.padding(8.dp)) {
                                             MarkdownBlock(
