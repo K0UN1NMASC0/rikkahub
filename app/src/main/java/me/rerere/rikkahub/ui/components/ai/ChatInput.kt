@@ -757,12 +757,10 @@ private fun StickerPanel(
                         modifier = Modifier.padding(6.dp)
                     ) {
                         if (imageUrl != null) {
-                            AsyncImage(
-                                model = imageUrl,
+                            StickerThumbnail(
+                                stickerId = stickerId!!,
                                 contentDescription = qm.title,
-                                modifier = Modifier
-                                    .size(48.dp),
-                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(48.dp),
                             )
                         } else {
                             Box(
@@ -791,14 +789,43 @@ private fun StickerPanel(
 
 private val stickerPattern = Regex("""\(表情包:(.+?)\)""")
 
+/**
+ * 表情包缩略图：先尝试 .png，失败则尝试 .gif
+ */
+@Composable
+private fun StickerThumbnail(
+    stickerId: String,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    var useFallback by remember(stickerId) { mutableStateOf(false) }
+    val url = if (useFallback) stickerUrlGif(stickerId) else stickerUrl(stickerId)
+
+    AsyncImage(
+        model = url,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = ContentScale.Fit,
+        onError = {
+            if (!useFallback) {
+                useFallback = true
+            }
+        }
+    )
+}
+
 private fun extractStickerId(content: String): String? {
     return stickerPattern.find(content)?.groupValues?.get(1)
 }
 
 private fun stickerUrl(id: String): String {
-    // 先尝试 png，gif 的话浏览器/coil 也能加载
     val encoded = id.replace(" ", "%20")
     return "https://raw.githubusercontent.com/K0UN1NMASC0/stickers/main/$encoded.png"
+}
+
+private fun stickerUrlGif(id: String): String {
+    val encoded = id.replace(" ", "%20")
+    return "https://raw.githubusercontent.com/K0UN1NMASC0/stickers/main/$encoded.gif"
 }
 
 @Composable
