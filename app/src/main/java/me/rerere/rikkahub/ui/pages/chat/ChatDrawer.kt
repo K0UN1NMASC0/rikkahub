@@ -244,6 +244,7 @@ fun ChatDrawerContent(
                 onCreate = { showCreateFolderDialog = true },
                 onRename = { folderToRename = it },
                 onDelete = { folderToDelete = it },
+                onHome = { navController.navigate(Screen.Home) },
             )
 
             ConversationList(
@@ -385,18 +386,6 @@ fun ChatDrawerContent(
                     },
                     onClick = {
                         navController.navigate(Screen.Stats)
-                    },
-                )
-
-                DrawerAction(
-                    icon = {
-                        Icon(HugeIcons.Home01, "主页")
-                    },
-                    label = {
-                        Text("主页")
-                    },
-                    onClick = {
-                        navController.navigate(Screen.Home)
                     },
                 )
 
@@ -790,6 +779,7 @@ private fun FolderBar(
     onCreate: () -> Unit,
     onRename: (Folder) -> Unit,
     onDelete: (Folder) -> Unit,
+    onHome: () -> Unit,
 ) {
     LazyRow(
         modifier = Modifier
@@ -845,6 +835,15 @@ private fun FolderBar(
                 icon = HugeIcons.FolderAdd,
                 selected = false,
                 onClick = onCreate,
+                onLongClick = {},
+            )
+        }
+        item {
+            FolderChip(
+                label = "主页",
+                icon = HugeIcons.Home01,
+                selected = false,
+                onClick = onHome,
                 onLongClick = {},
             )
         }

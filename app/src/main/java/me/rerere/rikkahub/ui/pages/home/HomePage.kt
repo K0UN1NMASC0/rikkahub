@@ -52,7 +52,8 @@ fun HomePage() {
                     setBackgroundColor(bgColor)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
-                    settings.allowFileAccess = false
+                    settings.allowFileAccess = true
+                    settings.allowContentAccess = true
                     addJavascriptInterface(HomeJsBridge(loader), "TulpaHome")
                     webViewClient = WebViewClient()
                     loadUrl("file:///android_asset/html/home.html")

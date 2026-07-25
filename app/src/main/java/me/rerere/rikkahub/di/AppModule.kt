@@ -106,6 +106,6 @@ val appModule = module {
     }
 
     single {
-        me.rerere.rikkahub.ui.pages.home.HomeDataLoader()
+        me.rerere.rikkahub.ui.pages.home.HomeDataLoader(get())
     }
 }
