@@ -819,12 +819,12 @@ private fun extractStickerId(content: String): String? {
 }
 
 private fun stickerUrl(id: String): String {
-    val encoded = id.replace(" ", "%20")
+    val encoded = java.net.URLEncoder.encode(id, "UTF-8").replace("+", "%20")
     return "https://raw.githubusercontent.com/K0UN1NMASC0/stickers/main/$encoded.png"
 }
 
 private fun stickerUrlGif(id: String): String {
-    val encoded = id.replace(" ", "%20")
+    val encoded = java.net.URLEncoder.encode(id, "UTF-8").replace("+", "%20")
     return "https://raw.githubusercontent.com/K0UN1NMASC0/stickers/main/$encoded.gif"
 }
 
