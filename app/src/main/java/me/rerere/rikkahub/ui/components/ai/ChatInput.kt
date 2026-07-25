@@ -695,7 +695,7 @@ private fun QuickMessageButton(
             showPanel = !showPanel
         }) {
         AsyncImage(
-            model = "https://v1.ax1x.com/2026/05/30/NhK1iJ.png",
+            model = "https://v1.ax1x.com/2026/05/30/NhKKY4.png",
             contentDescription = "表情包",
             modifier = Modifier.size(24.dp),
             contentScale = ContentScale.Fit,
@@ -787,7 +787,7 @@ private fun StickerPanel(
     }
 }
 
-private val stickerPattern = Regex("""\(表情包:(.+?)\)""")
+private val stickerPattern = Regex("""\(表情包:(.+)\)""")
 
 /**
  * 表情包缩略图：先尝试 .png，失败则尝试 .gif
