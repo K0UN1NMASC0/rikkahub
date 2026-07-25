@@ -263,20 +263,7 @@ function render(d) {
         </div>
       </div>
 
-      <div class="card weather">
-        <div class="card-label">🌤 ${esc(d.weather.city)}</div>
-        <div class="card-content">
-          <div class="weather-info">
-            <span class="weather-icon">${d.weather.icon}</span>
-            <div>
-              <span class="weather-temp">${esc(d.weather.temp)}</span>
-              <span class="weather-desc">${esc(d.weather.desc)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card checklist">
+      <div class="card checklist" style="grid-column: 1 / -1;">
         <div class="card-label">📋 清单</div>
         <div class="card-content">
           ${d.checklist.map(c => `

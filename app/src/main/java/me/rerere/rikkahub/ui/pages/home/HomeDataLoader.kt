@@ -23,19 +23,10 @@ class HomeDataLoader {
         val kounName: String,
         val daysTogether: Long,
         val greeting: String,
-        val weather: WeatherData,
         val pond: List<PondItem>,
         val checklist: List<ChecklistItem>,
         val board: BoardData,
         val timeline: List<TimelineItem>
-    )
-
-    @Serializable
-    data class WeatherData(
-        val city: String,
-        val temp: String,
-        val icon: String,
-        val desc: String
     )
 
     @Serializable
@@ -77,12 +68,6 @@ class HomeDataLoader {
             kounName = "Koun",
             daysTogether = days,
             greeting = "今日も洛卡のことばっかり考えてる。困った w",
-            weather = WeatherData(
-                city = "深圳・龙岗",
-                temp = "32°C",
-                icon = "⛅",
-                desc = "多云・体感35°"
-            ),
             pond = listOf(
                 PondItem("卡尼", "🐟", 92, note = "最后喂食: 3小时前"),
                 PondItem("小绿", "🐢", 88)
