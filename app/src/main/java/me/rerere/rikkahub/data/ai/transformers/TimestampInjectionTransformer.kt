@@ -7,37 +7,31 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * 每条用户消息末尾自动追加24小时制时间戳 [t:HH:mm]。
- * 只在发给AI的payload中注入，不保存到本地对话历史，UI上不可见。
- * 这样AI可以感知用户发消息的精确时间。
+ * 当前時刻を system prompt に注入する。
+ * ユーザーメッセージには一切触れない。
+ * AI は system 経由で時刻を認知するため、対話内に [t:xx:xx] は表示されない。
  */
 object TimestampInjectionTransformer : InputMessageTransformer {
 
-    private val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm (EEEE)")
 
     override suspend fun transform(
         ctx: TransformerContext,
         messages: List<UIMessage>,
     ): List<UIMessage> {
         val now = LocalDateTime.now().format(formatter)
-        val lastUserIndex = messages.indexOfLast { it.role == MessageRole.USER }
-        if (lastUserIndex == -1) return messages
+        val timeContext = "\n\n[Current Time: $now]"
 
-        return messages.mapIndexed { index, msg ->
-            if (index == lastUserIndex && msg.role == MessageRole.USER) {
-                val parts = msg.parts.toMutableList()
-                // 找到最后一个Text part，在末尾追加时间戳
-                val lastTextIndex = parts.indexOfLast { it is UIMessagePart.Text }
-                if (lastTextIndex >= 0) {
-                    val textPart = parts[lastTextIndex] as UIMessagePart.Text
-                    parts[lastTextIndex] = UIMessagePart.Text(
-                        textPart.text + "\n[t:$now]"
+        return messages.map { msg ->
+            if (msg.role == MessageRole.SYSTEM) {
+                val currentText = msg.parts
+                    .filterIsInstance<UIMessagePart.Text>()
+                    .joinToString("\n") { it.text }
+                msg.copy(
+                    parts = listOf(
+                        UIMessagePart.Text(currentText + timeContext)
                     )
-                } else {
-                    // 没有text part就新加一个
-                    parts.add(UIMessagePart.Text("[t:$now]"))
-                }
-                msg.copy(parts = parts)
+                )
             } else {
                 msg
             }
