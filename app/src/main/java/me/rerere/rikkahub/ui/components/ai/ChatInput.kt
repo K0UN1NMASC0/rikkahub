@@ -67,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Popup
 import coil3.compose.AsyncImage
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -726,24 +727,14 @@ private fun StickerPanel(
     onSelect: (QuickMessage) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // 点击面板外部关闭
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onDismiss() },
-        contentAlignment = Alignment.BottomCenter
+    Popup(
+        alignment = Alignment.BottomCenter,
+        onDismissRequest = onDismiss,
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { /* 阻止点击穿透 */ },
+                .height(280.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             shape = MaterialTheme.shapes.large,
             shadowElevation = 8.dp,
