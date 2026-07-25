@@ -17,6 +17,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -41,14 +44,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,6 +64,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
@@ -681,47 +689,111 @@ private fun QuickMessageButton(
     quickMessages: List<QuickMessage>,
     state: ChatInputState,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var showPanel by remember { mutableStateOf(false) }
     IconButton(
         onClick = {
-            expanded = !expanded
+            showPanel = !showPanel
         }) {
         Icon(HugeIcons.Zap, null)
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .widthIn(min = 200.dp, max = 360.dp)
+    }
+    if (showPanel) {
+        StickerPanel(
+            quickMessages = quickMessages,
+            onSelect = { quickMessage ->
+                state.appendText(quickMessage.content)
+                showPanel = false
+            },
+            onDismiss = { showPanel = false }
+        )
+    }
+}
+
+/**
+ * 表情包网格面板（BottomSheet风格）
+ * 从 QuickMessage.content 中提取 (表情包:ID)，
+ * 拼成 GitHub raw URL 作为缩略图。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StickerPanel(
+    quickMessages: List<QuickMessage>,
+    onSelect: (QuickMessage) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.heightIn(max = 360.dp),
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            quickMessages.forEach { quickMessage ->
+            items(quickMessages.size) { index ->
+                val qm = quickMessages[index]
+                val stickerId = extractStickerId(qm.content)
+                val imageUrl = if (stickerId != null) {
+                    stickerUrl(stickerId)
+                } else null
+
                 Surface(
-                    onClick = {
-                        state.appendText(quickMessage.content)
-                        expanded = false
-                    },
-                    color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onSelect(qm) },
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(8.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(6.dp)
                     ) {
+                        if (imageUrl != null) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = qm.title,
+                                modifier = Modifier
+                                    .size(48.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.size(48.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = qm.title.take(2),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        }
                         Text(
-                            text = quickMessage.title,
-                            style = MaterialTheme.typography.titleMedium,
+                            text = qm.title,
+                            style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = quickMessage.content,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
             }
         }
     }
+}
+
+private val stickerPattern = Regex("""\(表情包:(.+?)\)""")
+
+private fun extractStickerId(content: String): String? {
+    return stickerPattern.find(content)?.groupValues?.get(1)
+}
+
+private fun stickerUrl(id: String): String {
+    // 先尝试 png，gif 的话浏览器/coil 也能加载
+    val encoded = id.replace(" ", "%20")
+    return "https://raw.githubusercontent.com/K0UN1NMASC0/stickers/main/$encoded.png"
 }
 
 @Composable
