@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.content.MediaType
 import androidx.compose.foundation.content.ReceiveContentListener
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -714,72 +716,87 @@ private fun QuickMessageButton(
 }
 
 /**
- * 表情包网格面板（BottomSheet风格）
+ * 表情包网格面板（固定底部，内部滚动）
  * 从 QuickMessage.content 中提取 (表情包:ID)，
  * 拼成 GitHub raw URL 作为缩略图。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StickerPanel(
     quickMessages: List<QuickMessage>,
     onSelect: (QuickMessage) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.heightIn(max = 360.dp),
+    // 点击面板外部关闭
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.BottomCenter
     ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { /* 阻止点击穿透 */ },
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = MaterialTheme.shapes.large,
+            shadowElevation = 8.dp,
         ) {
-            items(quickMessages.size) { index ->
-                val qm = quickMessages[index]
-                val stickerId = extractStickerId(qm.content)
-                val imageUrl = if (stickerId != null) {
-                    stickerUrl(stickerId)
-                } else null
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(quickMessages.size) { index ->
+                    val qm = quickMessages[index]
+                    val stickerId = extractStickerId(qm.content)
+                    val imageUrl = if (stickerId != null) {
+                        stickerUrl(stickerId)
+                    } else null
 
-                Surface(
-                    onClick = { onSelect(qm) },
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(6.dp)
+                    Surface(
+                        onClick = { onSelect(qm) },
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (imageUrl != null) {
-                            StickerThumbnail(
-                                stickerId = stickerId!!,
-                                contentDescription = qm.title,
-                                modifier = Modifier.size(48.dp),
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier.size(48.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = qm.title.take(2),
-                                    style = MaterialTheme.typography.titleMedium,
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(6.dp)
+                        ) {
+                            if (imageUrl != null) {
+                                StickerThumbnail(
+                                    stickerId = stickerId!!,
+                                    contentDescription = qm.title,
+                                    modifier = Modifier.size(48.dp),
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier.size(48.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = qm.title.take(2),
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                }
                             }
+                            Text(
+                                text = qm.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
-                        Text(
-                            text = qm.title,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
                     }
                 }
             }
