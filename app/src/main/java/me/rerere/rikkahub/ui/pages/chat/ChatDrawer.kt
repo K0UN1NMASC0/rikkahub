@@ -57,6 +57,7 @@ import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.ChartColumn
 import me.rerere.hugeicons.stroke.Delete01
 import me.rerere.hugeicons.stroke.Folder01
+import me.rerere.hugeicons.stroke.Home01
 import me.rerere.hugeicons.stroke.FolderAdd
 import me.rerere.hugeicons.stroke.Image02
 import me.rerere.hugeicons.stroke.InLove
@@ -384,6 +385,18 @@ fun ChatDrawerContent(
                     },
                     onClick = {
                         navController.navigate(Screen.Stats)
+                    },
+                )
+
+                DrawerAction(
+                    icon = {
+                        Icon(HugeIcons.Home01, "主页")
+                    },
+                    label = {
+                        Text("主页")
+                    },
+                    onClick = {
+                        navController.navigate(Screen.Home)
                     },
                 )
 

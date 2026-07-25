@@ -129,6 +129,7 @@ import me.rerere.rikkahub.ui.pages.avatarframe.AvatarFrameEditorPage
 import me.rerere.rikkahub.ui.pages.stats.StatsPage
 import me.rerere.rikkahub.ui.pages.translator.TranslatorPage
 import me.rerere.rikkahub.ui.pages.webview.WebViewPage
+import me.rerere.rikkahub.ui.pages.home.HomePage
 import me.rerere.rikkahub.ui.theme.LocalDarkMode
 import me.rerere.rikkahub.ui.theme.RikkahubTheme
 import me.rerere.rikkahub.utils.CrashHandler
@@ -406,6 +407,10 @@ class RouteActivity : ComponentActivity() {
                                 WebViewPage(key.url, key.contentId)
                             }
 
+                            entry<Screen.Home> {
+                                HomePage()
+                            }
+
                             entry<Screen.SettingTheme> {
                                 SettingThemePage()
                             }
@@ -645,6 +650,9 @@ sealed interface Screen : NavKey {
 
     @Serializable
     data object ImageGen : Screen
+
+    @Serializable
+    data object Home : Screen
 
     @Serializable
     data class WebView(val url: String = "", val contentId: String = "") : Screen

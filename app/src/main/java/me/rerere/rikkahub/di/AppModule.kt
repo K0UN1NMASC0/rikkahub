@@ -104,4 +104,8 @@ val appModule = module {
             filesManager = get()
         )
     }
+
+    single {
+        me.rerere.rikkahub.ui.pages.home.HomeDataLoader()
+    }
 }

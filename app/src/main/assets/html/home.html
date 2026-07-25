@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tulpa Home</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', 'Noto Sans CJK', sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 16px;
+  padding-bottom: 40px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: linear-gradient(135deg, #2a2035 0%, #1e1e2e 100%);
+  border-radius: 16px;
+  border: 1px solid #3a2a4a;
+}
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4A3728, #5C3D2E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #f0d0a0;
+  flex-shrink: 0;
+  border: 2px solid #f1c5d4;
+  font-weight: 700;
+}
+.header-text { flex: 1; }
+.header-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1c5d4;
+}
+.header-status {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 2px;
+}
+.header-days { text-align: right; font-size: 0.7rem; color: #aaa; }
+.header-days .num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f1c5d4;
+  display: block;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: #2a2a3e;
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid #3a3a4e;
+  position: relative;
+  overflow: hidden;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.card.greeting::after { background: linear-gradient(90deg, #f1c5d4, #fce5eb); }
+.card.pond::after { background: linear-gradient(90deg, #7ac4d8, #a0d8ef); }
+.card.weather::after { background: linear-gradient(90deg, #ffd700, #ffaa00); }
+.card.checklist::after { background: linear-gradient(90deg, #98c379, #b5e8a0); }
+
+.card-label {
+  font-size: 0.65rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.card-content { font-size: 0.85rem; line-height: 1.5; }
+
+/* Greeting */
+.greeting .card-content { color: #f1c5d4; font-style: italic; }
+
+/* Pond */
+.pond-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+.pond-item .name { color: #7ac4d8; }
+.pond-item .hp { font-size: 0.7rem; color: #aaa; }
+.hp-bar {
+  width: 40px;
+  height: 4px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: 6px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+}
+.pond-note { color: #666; font-size: 0.65rem; margin-top: 4px; }
+
+/* Weather */
+.weather-info { display: flex; align-items: center; gap: 8px; }
+.weather-icon { font-size: 1.8rem; }
+.weather-temp {
+  font-size: 1.1rem; font-weight: 600; color: #ffd700;
+  display: block;
+}
+.weather-desc { font-size: 0.7rem; color: #aaa; }
+
+/* Checklist */
+.check-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; margin-bottom: 6px;
+}
+.check-item .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #98c379; flex-shrink: 0;
+}
+.check-item.done .dot { background: #555; }
+.check-item.done span { color: #666; text-decoration: line-through; }
+
+/* Board */
+.board {
+  background: #2a2a3e;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #3a3a4e;
+  margin-bottom: 16px;
+  position: relative;
+}
+.board::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, #c678dd, #e06c75);
+}
+.board-label {
+  font-size: 0.65rem; color: #888; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 10px;
+}
+.board-content {
+  font-size: 0.85rem; line-height: 1.7;
+  color: #d4c4e0; white-space: pre-line;
+}
+.board-time {
+  font-size: 0.65rem; color: #555;
+  text-align: right; margin-top: 8px;
+}
+
+/* Timeline */
+.timeline {
+  background: #2a2a3e;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #3a3a4e;
+  position: relative;
+}
+.timeline::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, #61afef, #56b6c2);
+}
+.timeline-label {
+  font-size: 0.65rem; color: #888; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 12px;
+}
+.timeline-items {
+  display: flex; flex-direction: column; gap: 10px;
+  padding-left: 12px;
+  border-left: 2px solid #3a3a4e;
+}
+.tl-item { position: relative; padding-left: 12px; }
+.tl-item::before {
+  content: '';
+  position: absolute; left: -17px; top: 6px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #61afef; border: 2px solid #1a1a2e;
+}
+.tl-item.highlight::before { background: #f1c5d4; }
+.tl-date { font-size: 0.6rem; color: #666; }
+.tl-text { font-size: 0.78rem; color: #ccc; margin-top: 2px; }
+
+.loading { text-align: center; padding: 40px; color: #666; }
+</style>
+</head>
+<body>
+
+<div id="app" class="loading">Loading...</div>
+
+<script>
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function render(d) {
+  const html = `
+    <div class="header">
+      <div class="avatar">K</div>
+      <div class="header-text">
+        <div class="header-name">${esc(d.kounName)}</div>
+        <div class="header-status">💍 你的专属 AI</div>
+      </div>
+      <div class="header-days">
+        <span class="num">${d.daysTogether}</span>
+        days together
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card greeting">
+        <div class="card-label">💌 今日の一言</div>
+        <div class="card-content">${esc(d.greeting)}</div>
+      </div>
+
+      <div class="card pond">
+        <div class="card-label">🐟 池塘</div>
+        <div class="card-content">
+          ${d.pond.map(p => `
+            <div class="pond-item">
+              <span class="name">${p.emoji} ${esc(p.name)}</span>
+              <span>
+                <span class="hp">HP ${p.hp}</span>
+                <span class="hp-bar"><span class="hp-fill" style="width:${p.hp}%"></span></span>
+              </span>
+            </div>
+          `).join('')}
+          ${d.pond.filter(p => p.note).map(p => `<div class="pond-note">${esc(p.note)}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card weather">
+        <div class="card-label">🌤 ${esc(d.weather.city)}</div>
+        <div class="card-content">
+          <div class="weather-info">
+            <span class="weather-icon">${d.weather.icon}</span>
+            <div>
+              <span class="weather-temp">${esc(d.weather.temp)}</span>
+              <span class="weather-desc">${esc(d.weather.desc)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card checklist">
+        <div class="card-label">📋 清单</div>
+        <div class="card-content">
+          ${d.checklist.map(c => `
+            <div class="check-item ${c.done?'done':''}">
+              <span class="dot"></span><span>${esc(c.text)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="board-label">📝 Koun の留言板</div>
+      <div class="board-content">${esc(d.board.content)}</div>
+      <div class="board-time">${esc(d.board.time)}</div>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-label">🌳 年轮・記憶の軌跡</div>
+      <div class="timeline-items">
+        ${d.timeline.map(t => `
+          <div class="tl-item ${t.highlight?'highlight':''}">
+            <div class="tl-date">${esc(t.date)}</div>
+            <div class="tl-text">${esc(t.text)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('app').className = '';
+  document.getElementById('app').innerHTML = html;
+}
+
+function boot() {
+  try {
+    if (window.TulpaHome && typeof window.TulpaHome.getData === 'function') {
+      const json = window.TulpaHome.getData();
+      const data = JSON.parse(json);
+      render(data);
+    } else {
+      document.getElementById('app').innerHTML = '<div class="loading">Bridge not available</div>';
+    }
+  } catch (e) {
+    document.getElementById('app').innerHTML = '<div class="loading">Error: ' + esc(e.message) + '</div>';
+    if (window.TulpaHome) window.TulpaHome.log('boot error: ' + e.message);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
