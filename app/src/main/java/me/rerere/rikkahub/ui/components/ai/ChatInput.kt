@@ -694,7 +694,12 @@ private fun QuickMessageButton(
         onClick = {
             showPanel = !showPanel
         }) {
-        Icon(HugeIcons.Zap, null)
+        AsyncImage(
+            model = "https://v1.ax1x.com/2026/05/30/NhK1iJ.png",
+            contentDescription = "表情包",
+            modifier = Modifier.size(24.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
     if (showPanel) {
         StickerPanel(
