@@ -717,77 +717,94 @@ private fun QuickMessageButton(
 }
 
 /**
- * 表情包网格面板（固定底部，内部滚动）
- * 从 QuickMessage.content 中提取 (表情包:ID)，
- * 拼成 GitHub raw URL 作为缩略图。
+ * 表情包网格面板（ModalBottomSheet）
+ * 下拉可关闭、返回键可关闭、内部网格可滚动。
+ * skipPartiallyExpanded=true 防止半展开状态的拖拽问题。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StickerPanel(
     quickMessages: List<QuickMessage>,
     onSelect: (QuickMessage) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Popup(
-        alignment = Alignment.BottomCenter,
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        dragHandle = {
+            // 顶部拖拽指示条
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .size(width = 32.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .then(
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { }
+                    ),
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(2.dp),
+                ) {}
+            }
+        },
     ) {
-        Surface(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = MaterialTheme.shapes.large,
-            shadowElevation = 8.dp,
+                .height(280.dp)
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(quickMessages.size) { index ->
-                    val qm = quickMessages[index]
-                    val stickerId = extractStickerId(qm.content)
-                    val imageUrl = if (stickerId != null) {
-                        stickerUrl(stickerId)
-                    } else null
+            items(quickMessages.size) { index ->
+                val qm = quickMessages[index]
+                val stickerId = extractStickerId(qm.content)
+                val imageUrl = if (stickerId != null) {
+                    stickerUrl(stickerId)
+                } else null
 
-                    Surface(
-                        onClick = { onSelect(qm) },
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        modifier = Modifier.fillMaxWidth()
+                Surface(
+                    onClick = { onSelect(qm) },
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(6.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(6.dp)
-                        ) {
-                            if (imageUrl != null) {
-                                StickerThumbnail(
-                                    stickerId = stickerId!!,
-                                    contentDescription = qm.title,
-                                    modifier = Modifier.size(48.dp),
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier.size(48.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = qm.title.take(2),
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                }
-                            }
-                            Text(
-                                text = qm.title,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 4.dp)
+                        if (imageUrl != null) {
+                            StickerThumbnail(
+                                stickerId = stickerId!!,
+                                contentDescription = qm.title,
+                                modifier = Modifier.size(48.dp),
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier.size(48.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = qm.title.take(2),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
                         }
+                        Text(
+                            text = qm.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
                     }
                 }
             }
