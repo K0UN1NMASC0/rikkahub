@@ -38,17 +38,19 @@ fun ChatMessageUserAvatar(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = nickname.ifEmpty { stringResource(R.string.user_default_name) },
-                style = MaterialTheme.typography.labelLargeEmphasized,
-                maxLines = 1,
-            )
+            if (settings.displaySetting.showUserName) {
+                Text(
+                    text = nickname.ifEmpty { stringResource(R.string.user_default_name) },
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    maxLines = 1,
+                )
+            }
             AvatarWithFrame(
                 name = nickname,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(36.dp),
                 value = avatar,
                 frame = settings.displaySetting.userAvatarFrame,
-                avatarSize = 28.dp,
+                avatarSize = 36.dp,
                 loading = false,
             )
         }
@@ -76,10 +78,10 @@ fun ChatMessageAssistantAvatar(
                 if (showIcon) {
                     AvatarWithFrame(
                         name = assistant.name,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(36.dp),
                         value = assistant.avatar,
                         frame = settings.displaySetting.assistantAvatarFrame,
-                        avatarSize = 28.dp,
+                        avatarSize = 36.dp,
                         loading = loading,
                     )
                 }
@@ -100,7 +102,7 @@ fun ChatMessageAssistantAvatar(
                 if (showIcon) {
                     AutoAIIcon(
                         name = model.modelId,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(36.dp),
                         loading = loading
                     )
                 }

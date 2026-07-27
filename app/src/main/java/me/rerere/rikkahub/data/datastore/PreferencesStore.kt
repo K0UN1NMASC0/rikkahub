@@ -583,6 +583,7 @@ data class DisplaySetting(
     val bubbleOpacity: Float = 1.0f,
     val showModelIcon: Boolean = true,
     val showModelName: Boolean = true,
+    val showUserName: Boolean = true,
     val showDateTimeInMessage: Boolean = false,
     val showTokenUsage: Boolean = true,
     val showThinkingContent: Boolean = true,

@@ -140,6 +140,18 @@ fun SettingPreferencesUIPage(vm: SettingVM = koinViewModel()) {
                         },
                     )
                     item(
+                        headlineContent = { Text("Show User Name") },
+                        supportingContent = { Text("Show user nickname next to avatar") },
+                        trailingContent = {
+                            Switch(
+                                checked = displaySetting.showUserName,
+                                onCheckedChange = {
+                                    updateDisplaySetting(displaySetting.copy(showUserName = it))
+                                }
+                            )
+                        },
+                    )
+                    item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_assistant_bubble_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_assistant_bubble_desc)) },
                         trailingContent = {
