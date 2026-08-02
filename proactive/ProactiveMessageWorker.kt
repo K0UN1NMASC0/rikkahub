@@ -16,6 +16,7 @@ import me.rerere.rikkahub.data.datastore.getCurrentAssistant
 import me.rerere.rikkahub.data.model.Conversation
 import me.rerere.rikkahub.data.model.toMessageNode
 import me.rerere.rikkahub.data.repository.ConversationRepository
+import me.rerere.rikkahub.service.ChatService
 import me.rerere.rikkahub.utils.sendNotification
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -39,6 +40,7 @@ class ProactiveMessageWorker(
 
     private val settingsStore: SettingsStore by inject()
     private val conversationRepository: ConversationRepository by inject()
+    private val chatService: ChatService by inject()
 
     companion object {
         private const val TAG = "ProactiveWorker"
@@ -326,6 +328,8 @@ class ProactiveMessageWorker(
                 updateAt = Instant.now()
             )
             conversationRepository.updateConversation(updatedConv)
+            // 如果该对话正在前台打开，同步内存 session，让界面立刻刷新（不用退后台再进）
+            chatService.syncNewMessageIfSessionActive(conversation.id, aiMessage)
         } else {
             val newConv = Conversation(
                 id = Uuid.random(),

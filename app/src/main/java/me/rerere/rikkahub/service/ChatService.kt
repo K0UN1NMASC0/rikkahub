@@ -938,6 +938,21 @@ class ChatService(
     }
 
     /**
+     * 如果指定对话的 session 正在活跃（前台打开中），则向其内存态追加一条新 AI 消息。
+     * 用于主动消息/后台消息等场景：避免凭空创建 session，也避免 DB 与内存不同步导致的覆盖丢失。
+     * 如果 session 不存在，什么都不做（用户下次打开时会从 DB 加载到最新状态）。
+     */
+    fun syncNewMessageIfSessionActive(conversationId: Uuid, aiMessage: UIMessage) {
+        val session = sessions[conversationId] ?: return // 没有活跃 session，跳过
+        val current = session.state.value
+        val updatedConv = current.copy(
+            messageNodes = current.messageNodes + aiMessage.toMessageNode(),
+            updateAt = Instant.now()
+        )
+        session.state.value = updatedConv
+    }
+
+    /**
      * 移动会话到文件夹（folderId 为 null 表示移出到未归类）。
      *
      * 若该会话当前有活跃 session（正在查看或后台生成），先同步内存态再落库：
