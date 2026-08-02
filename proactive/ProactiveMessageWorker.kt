@@ -46,6 +46,60 @@ class ProactiveMessageWorker(
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
+
+        // 探测用的短超时客户端：主 URL 连不上时快速失败，好切到备用
+        private val probeClient = OkHttpClient.Builder()
+            .connectTimeout(6, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+
+        /**
+         * 把设置里的 base_url 字段拆成候选列表。
+         * 支持用换行 / 逗号 / 分号分隔多个 URL，从上到下依次尝试。
+         * 兼容旧数据：只填了一个也照常工作。
+         */
+        fun parseBaseUrls(raw: String): List<String> {
+            return raw.split('\n', ',', ';', '，', '；')
+                .map { it.trim().trimEnd('/') }
+                .filter { it.isNotBlank() }
+                .distinct()
+        }
+
+        /**
+         * 依次尝试候选 URL，返回第一个能成功拿到响应体的结果。
+         * 全部失败则返回 null。
+         */
+        fun requestWithFallback(
+            baseUrls: List<String>,
+            apiKey: String,
+            bodyJson: String
+        ): String? {
+            val body = bodyJson.toRequestBody("application/json".toMediaType())
+            for ((index, base) in baseUrls.withIndex()) {
+                // 除最后一个候选外，都用短超时探测，好尽快 fallback
+                val client = if (index == baseUrls.lastIndex) httpClient else probeClient
+                try {
+                    val request = Request.Builder()
+                        .url("$base/chat/completions")
+                        .addHeader("Authorization", "Bearer $apiKey")
+                        .addHeader("Content-Type", "application/json")
+                        .post(body)
+                        .build()
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "URL[$index] ok: $base")
+                        return response.body?.string()
+                    } else {
+                        Log.w(TAG, "URL[$index] http ${response.code}: $base")
+                        response.close()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "URL[$index] failed ($base): ${e.message}")
+                }
+            }
+            Log.e(TAG, "All ${baseUrls.size} candidate URLs failed")
+            return null
+        }
     }
 
     override suspend fun doWork(): Result {
@@ -88,10 +142,11 @@ class ProactiveMessageWorker(
 
         if (storedMonth == currentMonth) return // 本月已生成
 
-        val baseUrl = prefs.getString("proactive_base_url", "") ?: ""
+        val baseUrlRaw = prefs.getString("proactive_base_url", "") ?: ""
+        val baseUrls = parseBaseUrls(baseUrlRaw)
         val apiKey = prefs.getString("proactive_api_key", "") ?: ""
         val modelId = prefs.getString("proactive_model_id", "") ?: ""
-        if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) return
+        if (baseUrls.isEmpty() || apiKey.isBlank() || modelId.isBlank()) return
 
         val daysInMonth = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
 
@@ -107,28 +162,20 @@ class ProactiveMessageWorker(
             put(JSONObject().put("role", "user").put("content", prompt))
         }
 
-        val body = JSONObject()
+        val bodyJson = JSONObject()
             .put("model", modelId)
             .put("messages", messages)
             .put("max_tokens", 2000)
             .put("temperature", 0.95)
-            .toString().toRequestBody("application/json".toMediaType())
-
-        val request = Request.Builder()
-            .url("${baseUrl.trimEnd('/')}/chat/completions")
-            .addHeader("Authorization", "Bearer $apiKey")
-            .addHeader("Content-Type", "application/json")
-            .post(body)
-            .build()
+            .toString()
 
         try {
-            val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) {
-                Log.e(TAG, "Love letter generation failed: ${response.code}")
+            val responseText = requestWithFallback(baseUrls, apiKey, bodyJson)
+            if (responseText == null) {
+                Log.e(TAG, "Love letter generation failed: all URLs unreachable")
                 return
             }
 
-            val responseText = response.body?.string() ?: return
             val content = JSONObject(responseText)
                 .getJSONArray("choices")
                 .getJSONObject(0)
@@ -161,11 +208,12 @@ class ProactiveMessageWorker(
 
     private suspend fun trigger() {
         val prefs = ctx.getSharedPreferences("proactive_settings", Context.MODE_PRIVATE)
-        val baseUrl = prefs.getString("proactive_base_url", "") ?: ""
+        val baseUrlRaw = prefs.getString("proactive_base_url", "") ?: ""
+        val baseUrls = parseBaseUrls(baseUrlRaw)
         val apiKey = prefs.getString("proactive_api_key", "") ?: ""
         val modelId = prefs.getString("proactive_model_id", "") ?: ""
 
-        if (baseUrl.isBlank() || apiKey.isBlank() || modelId.isBlank()) {
+        if (baseUrls.isEmpty() || apiKey.isBlank() || modelId.isBlank()) {
             Log.w(TAG, "Config incomplete")
             return
         }
@@ -239,27 +287,19 @@ class ProactiveMessageWorker(
             put(JSONObject().put("role", "user").put("content", "请决定是否发消息。没话说就回复 [PASS]。"))
         }
 
-        val body = JSONObject()
+        val bodyJson = JSONObject()
             .put("model", modelId)
             .put("messages", messages)
             .put("max_tokens", 300)
             .put("temperature", 0.9)
-            .toString().toRequestBody("application/json".toMediaType())
+            .toString()
 
-        val request = Request.Builder()
-            .url("${baseUrl.trimEnd('/')}/chat/completions")
-            .addHeader("Authorization", "Bearer $apiKey")
-            .addHeader("Content-Type", "application/json")
-            .post(body)
-            .build()
-
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            Log.e(TAG, "API error: ${response.code}")
+        val responseText = requestWithFallback(baseUrls, apiKey, bodyJson)
+        if (responseText == null) {
+            Log.e(TAG, "API error: all URLs unreachable")
             return
         }
 
-        val responseText = response.body?.string() ?: return
         val replyText = JSONObject(responseText)
             .getJSONArray("choices")
             .getJSONObject(0)

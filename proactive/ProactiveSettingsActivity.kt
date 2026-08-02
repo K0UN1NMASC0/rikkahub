@@ -213,10 +213,12 @@ private fun ProactiveSettingsScreen() {
                         OutlinedTextField(
                             value = baseUrl,
                             onValueChange = { baseUrl = it },
-                            label = { Text("Base URL") },
-                            placeholder = { Text("https://example.com/v1") },
+                            label = { Text("Base URL（可多行/逗号分隔，从上到下自动切换）") },
+                            placeholder = { Text("局域网: http://192.168.x.x:3000/v1\n公网: https://xxx.net/v1") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4,
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = TulpaPinkButton,
