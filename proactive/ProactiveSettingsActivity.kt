@@ -28,9 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 // Tulpa pink theme colors
 private val TulpaPink = Color(0xFFFCE5EB)
@@ -70,6 +78,11 @@ private fun ProactiveSettingsScreen() {
     var apiKey by remember { mutableStateOf(prefs.getString("proactive_api_key", "") ?: "") }
     var modelId by remember { mutableStateOf(prefs.getString("proactive_model_id", "") ?: "") }
     var interval by remember { mutableStateOf(prefs.getInt("proactive_interval", 180).toString()) }
+
+    // 连接测试结果（每行URL的通/不通状态）
+    val scope = rememberCoroutineScope()
+    var probeResult by remember { mutableStateOf("") }
+    var probing by remember { mutableStateOf(false) }
 
     val lastSentTime = remember {
         val ts = prefs.getLong("last_sent_time", 0L)
@@ -345,6 +358,83 @@ private fun ProactiveSettingsScreen() {
                             Text("💌", fontSize = 14.sp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("立即测试一次", fontWeight = FontWeight.Medium)
+                        }
+
+                        // 连接测试：逐个 ping Base URL，只看通不通，不调模型、不管发不发
+                        OutlinedButton(
+                            onClick = {
+                                val urls = baseUrl.split('\n', ',', ';', '，', '；')
+                                    .map { it.trim().trimEnd('/') }
+                                    .filter { it.isNotBlank() }
+                                    .distinct()
+                                val key = apiKey.trim()
+                                val model = modelId.trim()
+
+                                if (urls.isEmpty() || key.isBlank() || model.isBlank()) {
+                                    Toast.makeText(context, "先填写API配置", Toast.LENGTH_SHORT).show()
+                                    return@OutlinedButton
+                                }
+
+                                probing = true
+                                probeResult = "测试中…"
+                                scope.launch {
+                                    val sb = StringBuilder()
+                                    val client = OkHttpClient.Builder()
+                                        .connectTimeout(6, TimeUnit.SECONDS)
+                                        .readTimeout(10, TimeUnit.SECONDS)
+                                        .build()
+                                    // 最小请求体：1 token，尽量省钱
+                                    val bodyJson = "{\"model\":\"$model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1}"
+                                    val reqBody = bodyJson.toRequestBody("application/json".toMediaType())
+                                    for ((i, base) in urls.withIndex()) {
+                                        val line = withContext(Dispatchers.IO) {
+                                            try {
+                                                val req = Request.Builder()
+                                                    .url("$base/chat/completions")
+                                                    .addHeader("Authorization", "Bearer $key")
+                                                    .addHeader("Content-Type", "application/json")
+                                                    .post(reqBody)
+                                                    .build()
+                                                val start = System.currentTimeMillis()
+                                                client.newCall(req).execute().use { resp ->
+                                                    val ms = System.currentTimeMillis() - start
+                                                    if (resp.isSuccessful) "✓ [${i + 1}] 通 (${resp.code}, ${ms}ms)\n$base"
+                                                    else "✗ [${i + 1}] HTTP ${resp.code}\n$base"
+                                                }
+                                            } catch (e: Exception) {
+                                                "✗ [${i + 1}] ${e.javaClass.simpleName}: ${e.message}\n$base"
+                                            }
+                                        }
+                                        sb.append(line).append("\n\n")
+                                        probeResult = sb.toString().trimEnd()
+                                    }
+                                    probing = false
+                                }
+                            },
+                            enabled = !probing,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = TulpaPinkButton
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, TulpaPinkAccent)
+                        ) {
+                            Text("🔌", fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (probing) "测试中…" else "连接测试（逐个URL）", fontWeight = FontWeight.Medium)
+                        }
+
+                        // 连接测试结果显示
+                        if (probeResult.isNotBlank()) {
+                            Text(
+                                probeResult,
+                                fontSize = 12.sp,
+                                color = TulpaPinkDark,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(TulpaPink, RoundedCornerShape(10.dp))
+                                    .padding(12.dp)
+                            )
                         }
                     }
                 }
