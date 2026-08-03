@@ -15,6 +15,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -198,6 +199,29 @@ class ChatVM(
                 targetTokens,
                 keepRecentMessages
             ).onFailure {
+                chatService.addError(it, title = context.getString(R.string.error_title_compress_conversation))
+            }
+        }
+    }
+
+    // 压缩后生成分支：新对话的 id 会发到这里，UI 观察后跳转；原对话保留
+    private val _compressBranchNavigation = MutableStateFlow<Uuid?>(null)
+    val compressBranchNavigation: StateFlow<Uuid?> = _compressBranchNavigation
+
+    fun consumeCompressBranchNavigation() {
+        _compressBranchNavigation.value = null
+    }
+
+    fun handleCompressContextToBranch(additionalPrompt: String, targetTokens: Int, keepRecentMessages: Int): Job {
+        return viewModelScope.launch {
+            chatService.compressConversationToBranch(
+                conversation.value,
+                additionalPrompt,
+                targetTokens,
+                keepRecentMessages
+            ).onSuccess { branch ->
+                _compressBranchNavigation.value = branch.id
+            }.onFailure {
                 chatService.addError(it, title = context.getString(R.string.error_title_compress_conversation))
             }
         }

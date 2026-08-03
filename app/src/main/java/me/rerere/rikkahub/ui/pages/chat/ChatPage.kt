@@ -115,6 +115,14 @@ fun ChatPage(id: Uuid, text: String?, files: List<Uri>, nodeId: Uuid? = null) {
     val enableWebSearch by vm.enableWebSearch.collectAsStateWithLifecycle()
     val errors by vm.errors.collectAsStateWithLifecycle()
 
+    // 压缩生成分支后，跳转到新对话（原对话保留在历史）
+    val compressBranchId by vm.compressBranchNavigation.collectAsStateWithLifecycle()
+    LaunchedEffect(compressBranchId) {
+        val branchId = compressBranchId ?: return@LaunchedEffect
+        navigateToChatPage(navController, chatId = branchId)
+        vm.consumeCompressBranchNavigation()
+    }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
@@ -670,8 +678,12 @@ private fun ChatFilesPickerSheet(
             state = inputState,
             assistant = assistant,
             mcpManager = vm.mcpManager,
-            onCompressContext = { additionalPrompt, targetTokens, keepRecentMessages ->
-                vm.handleCompressContext(additionalPrompt, targetTokens, keepRecentMessages)
+            onCompressContext = { additionalPrompt, targetTokens, keepRecentMessages, branchMode ->
+                if (branchMode) {
+                    vm.handleCompressContextToBranch(additionalPrompt, targetTokens, keepRecentMessages)
+                } else {
+                    vm.handleCompressContext(additionalPrompt, targetTokens, keepRecentMessages)
+                }
             },
             onUpdateAssistant = {
                 vm.updateSettings(

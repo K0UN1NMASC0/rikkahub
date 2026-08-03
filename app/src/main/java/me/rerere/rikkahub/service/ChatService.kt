@@ -923,6 +923,100 @@ class ChatService(
         saveConversation(conversationId, newConversation)
     }
 
+    /**
+     * 压缩对话并生成【分支】：生成摘要后创建一个全新的对话（摘要 + 保留的最近消息），
+     * 原对话原封不动保留在历史列表中（作为完整聊天记录/回忆相册）。
+     * 与 compressConversation 的区别：不覆盖原对话，而是新建对话并返回它，供 UI 跳转。
+     */
+    suspend fun compressConversationToBranch(
+        conversation: Conversation,
+        additionalPrompt: String,
+        targetTokens: Int,
+        keepRecentMessages: Int = 32
+    ): Result<Conversation> = runCatching {
+        val settings = settingsStore.settingsFlow.first()
+        val model = settings.findModelById(settings.compressModelId)
+            ?: settings.getCurrentChatModel()
+            ?: throw IllegalStateException("No model available for compression")
+        val provider = model.findProvider(settings.providers)
+            ?: throw IllegalStateException("Provider not found")
+
+        val providerHandler = providerManager.getProviderByType(provider)
+
+        val maxMessagesPerChunk = 256
+        val allMessages = conversation.currentMessages
+
+        val messagesToCompress: List<UIMessage>
+        val messagesToKeep: List<UIMessage>
+
+        if (keepRecentMessages > 0 && allMessages.size > keepRecentMessages) {
+            messagesToCompress = allMessages.dropLast(keepRecentMessages)
+            messagesToKeep = allMessages.takeLast(keepRecentMessages)
+        } else if (keepRecentMessages > 0) {
+            throw IllegalStateException(context.getString(R.string.chat_page_compress_not_enough_messages))
+        } else {
+            messagesToCompress = allMessages
+            messagesToKeep = emptyList()
+        }
+
+        fun splitMessages(messages: List<UIMessage>): List<List<UIMessage>> {
+            if (messages.size <= maxMessagesPerChunk) return listOf(messages)
+            val mid = messages.size / 2
+            val left = splitMessages(messages.subList(0, mid))
+            val right = splitMessages(messages.subList(mid, messages.size))
+            return left + right
+        }
+
+        suspend fun compressMessages(messages: List<UIMessage>): String {
+            val contentToCompress = messages.joinToString("\n\n") { it.summaryAsText(maxLength = 2000) }
+            val prompt = settings.compressPrompt.applyPlaceholders(
+                "content" to contentToCompress,
+                "target_tokens" to targetTokens.toString(),
+                "additional_context" to if (additionalPrompt.isNotBlank()) {
+                    "Additional instructions from user: $additionalPrompt"
+                } else "",
+                "locale" to Locale.getDefault().displayName
+            )
+
+            val result = providerHandler.generateText(
+                providerSetting = provider,
+                messages = listOf(UIMessage.user(prompt)),
+                params = backgroundTextGenerationParams(model),
+            )
+
+            return result.choices[0].message?.toText()?.trim()
+                ?: throw IllegalStateException("Failed to generate compressed summary")
+        }
+
+        val compressedSummaries = coroutineScope {
+            splitMessages(messagesToCompress)
+                .map { chunk -> async { compressMessages(chunk) } }
+                .awaitAll()
+        }
+
+        // 摘要 + 保留的最近消息，作为新对话的初始消息
+        val newMessageNodes = buildList {
+            compressedSummaries.forEach { summary ->
+                add(UIMessage.user(summary).toMessageNode())
+            }
+            addAll(messagesToKeep.map { it.toMessageNode() })
+        }
+
+        // 新建对话，继承原对话的人格/注入/世界书等设定；原对话完全不动
+        val branchConversation = Conversation(
+            id = Uuid.random(),
+            assistantId = conversation.assistantId,
+            messageNodes = newMessageNodes,
+            customSystemPrompt = conversation.customSystemPrompt,
+            modeInjectionIds = conversation.modeInjectionIds,
+            lorebookIds = conversation.lorebookIds,
+            folderId = conversation.folderId,
+        )
+
+        saveConversation(branchConversation.id, branchConversation)
+        branchConversation
+    }
+
     // ---- 对话状态更新 ----
 
     private fun updateConversation(conversationId: Uuid, conversation: Conversation) {
