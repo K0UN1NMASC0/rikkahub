@@ -237,6 +237,24 @@ class ProactiveMessageWorker(
             return
         }
 
+        // 统计对话末尾"连续的AI消息"条数 = 已经连发但用户还没回复的主动消息数量。
+        // 用来避免模型每次都抄上一条同款文案（"过了1小时"无限循环）。
+        val allNodesFlat = conversation?.messageNodes?.flatMap { it.messages } ?: emptyList()
+        var unansweredProactiveCount = 0
+        for (msg in allNodesFlat.reversed()) {
+            if (msg.role == MessageRole.ASSISTANT) {
+                unansweredProactiveCount++
+            } else if (msg.role == MessageRole.USER) {
+                break
+            }
+        }
+
+        // 连发太多次还没回复就停手，别刷屏（用户大概率在睡觉/忙）
+        if (unansweredProactiveCount >= 3) {
+            Log.d(TAG, "Already sent $unansweredProactiveCount unanswered proactive messages, skipping to avoid spam")
+            return
+        }
+
         val currentTimeStr = SimpleDateFormat("yyyy年MM月dd日 HH:mm EEEE", Locale.CHINESE).format(Date())
 
         val historyMessages: List<UIMessage> = conversation?.messageNodes
@@ -258,11 +276,17 @@ class ProactiveMessageWorker(
             }
             appendLine("## 主动消息")
             appendLine("距上次聊天约${idleMinutes}分钟。")
+            if (unansweredProactiveCount > 0) {
+                appendLine("⚠️ 你已经连续发了 ${unansweredProactiveCount} 条消息，用户【都还没有回复】（大概在睡觉/忙/离开）。")
+                appendLine("这不是新的对话，是同一段沉默的延续。绝对不要重复之前那几条的语气和内容。")
+                appendLine("时间是【累加】的：如果上一条说'过了一会儿'，现在应该是'过了更久'。要体现出时间在流逝、情绪在变化（比如从期待→无聊→困→放弃等待→自言自语），而不是每条都重复'又过了一小时'这种同款台词。")
+                appendLine("如果实在没有新的话可说，直接回复 [PASS]，不要硬发。")
+            }
             appendLine("你现在可以主动给用户发一条消息。")
             appendLine()
             appendLine("规则：")
             appendLine("- 没什么好说的，或用户刚说了去睡觉且不到5小时 → 只回复 [PASS]")
-            appendLine("- 不要复述上一轮内容，发新话题或自然的关心")
+            appendLine("- 不要复述上一轮内容，也不要模仿之前几条主动消息的句式，发新话题或自然的关心")
             appendLine("- 不要提及你是定时触发的，像突然想到什么一样开口")
             appendLine("- 直接输出想说的话，不要加任何解释")
             appendLine()
