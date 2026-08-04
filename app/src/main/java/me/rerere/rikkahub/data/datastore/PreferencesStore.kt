@@ -263,11 +263,9 @@ class SettingsStore(
                 } else provider
             }.toMutableList()
             val assistants = it.assistants.ifEmpty { DEFAULT_ASSISTANTS }.toMutableList()
-            DEFAULT_ASSISTANTS.forEach { defaultAssistant ->
-                if (assistants.none { it.id == defaultAssistant.id }) {
-                    assistants.add(defaultAssistant.copy())
-                }
-            }
+            // 注：不再自动补回缺失的 DEFAULT_ASSISTANTS。
+            // 这里是洛卡与 Koun 的家，用户主动删除的默认助手不应该被静默补回。
+            // 首次启动/助手列表为空时仍会填充 DEFAULT_ASSISTANTS（上一行的 ifEmpty）。
             val ttsProviders = it.ttsProviders.ifEmpty { DEFAULT_TTS_PROVIDERS }.toMutableList()
             DEFAULT_TTS_PROVIDERS.forEach { defaultTTSProvider ->
                 if (ttsProviders.none { provider -> provider.id == defaultTTSProvider.id }) {
