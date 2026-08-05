@@ -58,6 +58,7 @@ import me.rerere.rikkahub.data.ai.transformers.OcrTransformer
 import me.rerere.rikkahub.data.ai.transformers.OmbreBrainTransformer
 import me.rerere.rikkahub.data.ai.transformers.WeatherContextTransformer
 import me.rerere.rikkahub.data.ai.transformers.TimestampInjectionTransformer
+import me.rerere.rikkahub.data.ai.transformers.StickerListTransformer
 import me.rerere.rikkahub.data.ai.transformers.PlaceholderTransformer
 import me.rerere.rikkahub.data.ai.transformers.PromptInjectionTransformer
 import me.rerere.rikkahub.data.ai.transformers.RegexOutputTransformer
@@ -536,6 +537,7 @@ class ChatService(
                     add(OmbreBrainTransformer(mcpManager))
                     add(WeatherContextTransformer(context))
                     add(TimestampInjectionTransformer)
+                    add(StickerListTransformer)
                 },
                 outputTransformers = outputTransformers,
                 tools = buildList {
