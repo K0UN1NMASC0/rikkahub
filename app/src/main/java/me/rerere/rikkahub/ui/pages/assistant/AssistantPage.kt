@@ -60,7 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.rerere.hugeicons.stroke.MoreVertical
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.Screen
-import me.rerere.rikkahub.data.datastore.DEFAULT_ASSISTANTS_IDS
+
 import me.rerere.rikkahub.data.datastore.Settings
 import me.rerere.rikkahub.data.model.Assistant
 import me.rerere.rikkahub.data.model.AssistantMemory
@@ -532,8 +532,8 @@ private fun AssistantActionSheet(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
 
-            // 删除选项（仅非默认助手显示）
-            if (assistant.id !in DEFAULT_ASSISTANTS_IDS) {
+            // 删除选项（所有助手均可删除）
+            if (true) {
                 ListItem(
                     headlineContent = {
                         Text(
