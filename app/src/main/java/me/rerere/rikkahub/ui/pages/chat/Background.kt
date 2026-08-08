@@ -40,8 +40,8 @@ fun AssistantBackground(setting: Settings, modifier: Modifier) {
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                backgroundColor.copy(alpha = 0.2f),
-                                backgroundColor.copy(alpha = 0.5f)
+                                backgroundColor.copy(alpha = 0f),
+                                backgroundColor.copy(alpha = 0f)
                             )
                         )
                     )
