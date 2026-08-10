@@ -41,13 +41,13 @@ class TimeReminderTransformerTest {
     }
 
     @Test
-    fun `gap less than 3 minutes should not inject between messages`() {
+    fun `short gap within same day should not inject between messages`() {
+        // 几分钟的普通短间隔对话：不注入时间，避免机械报时
         val messages = listOf(
             userMessage("Hello", LocalDateTime(2026, 2, 22, 10, 0, 0)),
             userMessage("World", LocalDateTime(2026, 2, 22, 10, 2, 0)), // 2 分钟
         )
         val result = applyTimeReminder(messages)
-        // 首条前有 1 条注入，其余不注入
         assertEquals(3, result.size)
         assertTrue(getMessageText(result[0]).contains("<time_reminder>"))
         assertEquals("Hello", getMessageText(result[1]))
@@ -55,17 +55,47 @@ class TimeReminderTransformerTest {
     }
 
     @Test
-    fun `gap over 3 minutes should inject time reminder before that message`() {
+    fun `moderate gap under 2 hours within same day should not inject`() {
+        // 30 分钟：既不足 2 小时、也没跨天 → 不注入
         val messages = listOf(
             userMessage("Hello", LocalDateTime(2026, 2, 22, 10, 0, 0)),
             userMessage("World", LocalDateTime(2026, 2, 22, 10, 30, 0)), // 30 分钟
         )
         val result = applyTimeReminder(messages)
+        // 只有首条前 1 条注入 + 2 条原始 user
+        assertEquals(3, result.size)
+        assertEquals("Hello", getMessageText(result[1]))
+        assertEquals("World", getMessageText(result[2]))
+    }
+
+    @Test
+    fun `gap over 2 hours should inject time reminder before that message`() {
+        // 超过 2 小时的显著长间隔 → 注入
+        val messages = listOf(
+            userMessage("Hello", LocalDateTime(2026, 2, 22, 10, 0, 0)),
+            userMessage("World", LocalDateTime(2026, 2, 22, 13, 0, 0)), // 3 小时
+        )
+        val result = applyTimeReminder(messages)
         // 首条前 1 条 + World 前 1 条 + 2 条 user
         assertEquals(4, result.size)
         assertTrue(getMessageText(result[2]).contains("距用户上条消息"))
-        assertTrue(getMessageText(result[2]).contains("30分钟"))
+        assertTrue(getMessageText(result[2]).contains("3小时"))
         assertEquals("World", getMessageText(result[3]))
+    }
+
+    @Test
+    fun `crossing local date should inject even if gap under 2 hours`() {
+        // 跨天：哪怕间隔不足 2 小时（比如熬夜到深夜、隔天凌晨回来），也注入
+        val messages = listOf(
+            userMessage("晚安前一句", LocalDateTime(2026, 2, 22, 23, 30, 0)),
+            userMessage("隔天凌晨回来", LocalDateTime(2026, 2, 23, 0, 30, 0)), // 仅 1 小时，但跨天
+        )
+        val result = applyTimeReminder(messages)
+        assertEquals(4, result.size)
+        val injected = getMessageText(result[2])
+        assertTrue(injected.contains("距用户上条消息"))
+        assertTrue(injected.contains("1小时"))
+        assertEquals("隔天凌晨回来", getMessageText(result[3]))
     }
 
     @Test
@@ -96,20 +126,20 @@ class TimeReminderTransformerTest {
         val messages = listOf(
             userMessage("Q1", LocalDateTime(2026, 2, 22, 10, 0, 0)),
             assistantMessage("A1", LocalDateTime(2026, 2, 22, 10, 0, 30)),
-            userMessage("Q2", LocalDateTime(2026, 2, 22, 10, 30, 0)), // 距 Q1 30 分钟
+            userMessage("Q2", LocalDateTime(2026, 2, 22, 13, 0, 0)), // 距 Q1 3 小时
         )
         val result = applyTimeReminder(messages)
         // 首条前 1 条 + Q2 前 1 条 + 3 条原始
         assertEquals(5, result.size)
         val injectedBeforeQ2 = getMessageText(result[3])
-        assertTrue(injectedBeforeQ2.contains("30分钟"))
+        assertTrue(injectedBeforeQ2.contains("3小时"))
     }
 
     @Test
     fun `injected message role should be SYSTEM not USER`() {
         val messages = listOf(
             userMessage("Hello", LocalDateTime(2026, 2, 22, 10, 0, 0)),
-            userMessage("World", LocalDateTime(2026, 2, 22, 12, 0, 0)),
+            userMessage("World", LocalDateTime(2026, 2, 22, 13, 0, 0)),
         )
         val result = applyTimeReminder(messages)
         // 所有注入的 time_reminder 都应该是 SYSTEM
