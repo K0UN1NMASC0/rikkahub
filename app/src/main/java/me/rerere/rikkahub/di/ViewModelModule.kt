@@ -33,7 +33,7 @@ val viewModelModule = module {
             conversationRepo = get(),
             chatService = get(),
             updateChecker = get(),
-            analytics = get(),
+            // analytics = get(), // Tulpa: Firebase disabled
             filesManager = get(),
             favoriteRepository = get(),
         )
