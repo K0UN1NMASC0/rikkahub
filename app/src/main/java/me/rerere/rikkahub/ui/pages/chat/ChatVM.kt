@@ -11,7 +11,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.analytics.FirebaseAnalytics
+// Tulpa: Firebase disabled
+// import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,7 +56,7 @@ class ChatVM(
     private val conversationRepo: ConversationRepository,
     private val chatService: ChatService,
     val updateChecker: UpdateChecker,
-    private val analytics: FirebaseAnalytics,
+    // private val analytics: FirebaseAnalytics, // Tulpa: Firebase disabled
     private val filesManager: FilesManager,
     private val favoriteRepository: FavoriteRepository,
 ) : ViewModel() {
@@ -176,14 +177,14 @@ class ChatVM(
      */
     fun handleMessageSend(content: List<UIMessagePart>,answer: Boolean = true) {
         if (content.isEmptyInputMessage()) return
-        analytics.logEvent("ai_send_message", null)
+        // analytics.logEvent("ai_send_message", null)
 
         chatService.sendMessage(_conversationId, content, answer)
     }
 
     fun handleMessageEdit(parts: List<UIMessagePart>, messageId: Uuid) {
         if (parts.isEmptyInputMessage()) return
-        analytics.logEvent("ai_edit_message", null)
+        // analytics.logEvent("ai_edit_message", null)
 
         viewModelScope.launch {
             chatService.editMessage(_conversationId, messageId, parts)
@@ -249,7 +250,7 @@ class ChatVM(
         message: UIMessage,
         regenerateAssistantMsg: Boolean = true
     ) {
-        analytics.logEvent("ai_regenerate_at_message", null)
+        // analytics.logEvent("ai_regenerate_at_message", null)
         chatService.regenerateAtMessage(_conversationId, message, regenerateAssistantMsg)
     }
 
@@ -258,7 +259,7 @@ class ChatVM(
         approved: Boolean,
         reason: String = ""
     ) {
-        analytics.logEvent("ai_tool_approval", null)
+        // analytics.logEvent("ai_tool_approval", null)
         chatService.handleToolApproval(_conversationId, toolCallId, approved, reason)
     }
 
@@ -266,7 +267,7 @@ class ChatVM(
         toolCallId: String,
         answer: String,
     ) {
-        analytics.logEvent("ai_tool_answer", null)
+        // analytics.logEvent("ai_tool_answer", null)
         chatService.handleToolApproval(_conversationId, toolCallId, approved = true, answer = answer)
     }
 
