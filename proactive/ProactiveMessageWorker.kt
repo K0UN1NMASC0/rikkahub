@@ -89,8 +89,13 @@ class ProactiveMessageWorker(
                         .build()
                     val response = client.newCall(request).execute()
                     if (response.isSuccessful) {
-                        Log.d(TAG, "URL[$index] ok: $base")
-                        return response.body?.string()
+                        val bodyText = response.body?.string()
+                        if (!bodyText.isNullOrBlank()) {
+                            Log.d(TAG, "URL[$index] ok: $base")
+                            return bodyText
+                        } else {
+                            Log.w(TAG, "URL[$index] 200 but empty body, trying next: $base")
+                        }
                     } else {
                         Log.w(TAG, "URL[$index] http ${response.code}: $base")
                         response.close()
