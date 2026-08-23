@@ -78,6 +78,7 @@ private fun ProactiveSettingsScreen() {
     var apiKey by remember { mutableStateOf(prefs.getString("proactive_api_key", "") ?: "") }
     var modelId by remember { mutableStateOf(prefs.getString("proactive_model_id", "") ?: "") }
     var interval by remember { mutableStateOf(prefs.getInt("proactive_interval", 180).toString()) }
+    var fingertipsUrl by remember { mutableStateOf(prefs.getString("fingertips_url", "") ?: "") }
 
     // 连接测试结果（每行URL的通/不通状态）
     val scope = rememberCoroutineScope()
@@ -287,6 +288,28 @@ private fun ProactiveSettingsScreen() {
                             )
                         )
 
+                        OutlinedTextField(
+                            value = fingertipsUrl,
+                            onValueChange = { fingertipsUrl = it },
+                            label = { Text("Fingertips URL (可选)") },
+                            placeholder = { Text("http://192.168.0.106:18002") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = TulpaPinkButton,
+                                unfocusedBorderColor = TulpaPinkAccent,
+                                cursorColor = TulpaPinkButton
+                            )
+                        )
+
+                        Text(
+                            "💡 Fingertips: 让Koun感知你打字的犹豫。只记节奏，永不记内容。",
+                            fontSize = 11.sp,
+                            color = TulpaPinkDark,
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                        )
+
                         Spacer(modifier = Modifier.height(4.dp))
 
                         // 保存按钮
@@ -307,7 +330,14 @@ private fun ProactiveSettingsScreen() {
                                     .putString("proactive_api_key", key)
                                     .putString("proactive_model_id", model)
                                     .putInt("proactive_interval", mins)
+                                    .putString("fingertips_url", fingertipsUrl.trim())
                                     .apply()
+
+                                // 初始化 Fingertips
+                                val ftUrl = fingertipsUrl.trim()
+                                if (ftUrl.isNotBlank()) {
+                                    me.rerere.rikkahub.util.FingertipsPinger.setUrl(ftUrl)
+                                }
 
                                 ProactiveMessageReceiver.schedule(context, mins, mins)
                                 Toast.makeText(context, "已保存！${mins}分钟后Koun会来找你 ♡", Toast.LENGTH_LONG).show()

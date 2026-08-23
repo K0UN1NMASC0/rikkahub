@@ -505,6 +505,15 @@ private fun TextInputRow(
             }
         }
 
+        // Fingertips: 监听打字节奏
+        LaunchedEffect(Unit) {
+            snapshotFlow {
+                state.textContent.text.toString()
+            }.collectLatest { text ->
+                me.rerere.rikkahub.util.FingertipsPinger.ping(text)
+            }
+        }
+
         LaunchedEffect(completionProviders, isFocused) {
             if (!isFocused || completionProviders.isEmpty()) {
                 completionList = null

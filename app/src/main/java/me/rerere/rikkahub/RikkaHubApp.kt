@@ -59,6 +59,17 @@ class RikkaHubApp : Application() {
         this.createNotificationChannel()
 me.rerere.rikkahub.data.service.ProactiveMessageReceiver.schedule(this, 180, 180)
 
+        // Fingertips: 初始化打字节奏感知
+        try {
+            val ftPrefs = getSharedPreferences("proactive_settings", 0)
+            val ftUrl = ftPrefs.getString("fingertips_url", null)
+            if (!ftUrl.isNullOrBlank()) {
+                me.rerere.rikkahub.util.FingertipsPinger.setUrl(ftUrl)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Fingertips init failed: ${e.message}")
+        }
+
 
         // set cursor window size to 32MB
         DatabaseUtil.setCursorWindowSize(32 * 1024 * 1024)
