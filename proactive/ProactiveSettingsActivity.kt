@@ -320,6 +320,13 @@ private fun ProactiveSettingsScreen() {
                                 val model = modelId.trim()
                                 val mins = interval.trim().toIntOrNull() ?: 180
 
+                                // 无论主动消息配置是否完整，fingertips_url 都单独保存
+                                val ftUrl = fingertipsUrl.trim()
+                                if (ftUrl.isNotBlank()) {
+                                    prefs.edit().putString("fingertips_url", ftUrl).apply()
+                                    me.rerere.rikkahub.util.FingertipsPinger.setUrl(ftUrl)
+                                }
+
                                 if (url.isBlank() || key.isBlank() || model.isBlank()) {
                                     Toast.makeText(context, "请填写完整哦", Toast.LENGTH_SHORT).show()
                                     return@Button
