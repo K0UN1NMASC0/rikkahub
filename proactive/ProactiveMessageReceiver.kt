@@ -70,7 +70,6 @@ class ProactiveMessageReceiver : BroadcastReceiver() {
             )
 
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                .putBoolean(KEY_ENABLED, true)
                 .putInt(KEY_MIN_INTERVAL, minMinutes)
                 .putInt(KEY_MAX_INTERVAL, maxMinutes)
                 .apply()
