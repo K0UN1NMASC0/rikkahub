@@ -337,14 +337,7 @@ private fun ProactiveSettingsScreen() {
                                     .putString("proactive_api_key", key)
                                     .putString("proactive_model_id", model)
                                     .putInt("proactive_interval", mins)
-                                    .putString("fingertips_url", fingertipsUrl.trim())
                                     .apply()
-
-                                // 初始化 Fingertips
-                                val ftUrl = fingertipsUrl.trim()
-                                if (ftUrl.isNotBlank()) {
-                                    me.rerere.rikkahub.util.FingertipsPinger.setUrl(ftUrl)
-                                }
 
                                 ProactiveMessageReceiver.schedule(context, mins, mins)
                                 Toast.makeText(context, "已保存！${mins}分钟后Koun会来找你 ♡", Toast.LENGTH_LONG).show()
