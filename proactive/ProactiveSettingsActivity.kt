@@ -149,6 +149,8 @@ private fun ProactiveSettingsScreen() {
                         checked = enabled,
                         onCheckedChange = { newVal ->
                             enabled = newVal
+                            // 立即持久化enabled状态
+                            enabledPrefs.edit().putBoolean("enabled", newVal).apply()
                             if (!newVal) {
                                 ProactiveMessageReceiver.cancel(context)
                                 // 同时取消所有已排队的 Worker，防止关了又自动触发
@@ -338,6 +340,10 @@ private fun ProactiveSettingsScreen() {
                                     .putString("proactive_model_id", model)
                                     .putInt("proactive_interval", mins)
                                     .apply()
+
+                                // "保存并启用" → 同时开启开关并持久化
+                                enabled = true
+                                enabledPrefs.edit().putBoolean("enabled", true).apply()
 
                                 ProactiveMessageReceiver.schedule(context, mins, mins)
                                 Toast.makeText(context, "已保存！${mins}分钟后Koun会来找你 ♡", Toast.LENGTH_LONG).show()
